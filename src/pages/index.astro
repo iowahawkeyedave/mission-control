@@ -1,0 +1,87 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="MissionControl">
+  <main class="flex h-screen overflow-hidden">
+    <!-- Sidebar / File Tree -->
+    <aside class="w-64 border-r border-border bg-card flex flex-col">
+      <div class="p-4 border-b border-border">
+        <h1 class="text-2xl font-bold text-primary flex items-center gap-2">
+          <span class="text-3xl">🚀</span> MissionControl
+        </h1>
+      </div>
+      <div class="p-4 flex-1 overflow-auto">
+        <div class="text-sm text-muted-foreground">
+          <p class="font-semibold mb-2">Workspace</p>
+          <ul class="space-y-1 ml-2">
+            <li class="hover:bg-accent hover:text-accent-foreground rounded px-2 py-1 cursor-pointer">
+              📄 AGENTS.md
+            </li>
+            <li class="hover:bg-accent hover:text-accent-foreground rounded px-2 py-1 cursor-pointer">
+              📄 SOUL.md
+            </li>
+            <li class="hover:bg-accent hover:text-accent-foreground rounded px-2 py-1 cursor-pointer">
+              📄 USER.md
+            </li>
+            <li class="hover:bg-accent hover:text-accent-foreground rounded px-2 py-1 cursor-pointer">
+              📁 .learnings/
+            </li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col">
+      <!-- Toolbar -->
+      <header class="border-b border-border bg-card p-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <span class="text-sm font-medium text-muted-foreground">
+            Current file: <span class="text-foreground font-semibold">IDENTITY.md</span>
+          </span>
+        </div>
+        <div class="flex gap-2">
+          <button class="px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded hover:opacity-90">
+            Save
+          </button>
+        </div>
+      </header>
+
+      <!-- Editor + Preview Split -->
+      <div class="flex-1 flex">
+        <!-- Editor -->
+        <textarea
+          class="flex-1 resize-none border-none bg-background p-4 font-mono text-sm focus:outline-none"
+          placeholder="# Start editing Markdown..."
+        >
+# IDENTITY.md - Who Am I?
+
+- **Name:** Peter Gibbons
+- **Creature:** The guy from Office Space
+- **Vibe:** Chill, anti-corporate
+- **Emoji:** 🖖
+
+---
+
+"I wouldn't say I've been *missing* work."
+        </textarea>
+
+        <!-- Preview -->
+        <div class="flex-1 border-l border-border bg-muted/20 p-4 overflow-auto">
+          <article class="prose prose-invert max-w-none">
+            <h1>IDENTITY.md - Who Am I?</h1>
+            <ul>
+              <li><strong>Name:</strong> Peter Gibbons</li>
+              <li><strong>Creature:</strong> The guy from Office Space</li>
+              <li><strong>Vibe:</strong> Chill, anti-corporate</li>
+              <li><strong>Emoji:</strong> 🖖</li>
+            </ul>
+            <hr />
+            <p>"I wouldn't say I've been <em>missing</em> work."</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>

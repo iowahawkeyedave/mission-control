@@ -1,0 +1,22 @@
+---
+import '../styles/global.css';
+interface Props {
+  title?: string;
+}
+
+const { title = "MissionControl" } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+  </head>
+  <body class="antialiased min-h-screen bg-background text-foreground">
+    <slot />
+  </body>
+</html>
