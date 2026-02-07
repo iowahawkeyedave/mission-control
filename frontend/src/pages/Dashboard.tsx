@@ -35,6 +35,16 @@ function QuickActionsBar() {
   const handleQuickAction = async (endpoint: string, label: string) => {
     if (loading) return
     
+    // Email and Schedule: open chat widget with auto-send
+    if (endpoint === '/quick/emails') {
+      window.dispatchEvent(new CustomEvent('open-chat', { detail: { message: 'Check my unread emails and summarize anything important.', autoSend: true } }))
+      return
+    }
+    if (endpoint === '/quick/schedule') {
+      window.dispatchEvent(new CustomEvent('open-chat', { detail: { message: "What's on my calendar today and tomorrow?", autoSend: true } }))
+      return
+    }
+    
     setLoading(endpoint)
     setResult(null)
     
@@ -47,9 +57,6 @@ function QuickActionsBar() {
       
       if (data.status === 'triggered') {
         setResult('✅ Heartbeat triggered')
-      } else if (data.status === 'sent') {
-        // Show reply as inline result
-        setResult(`✅ ${data.reply || 'Done'}`)
       } else if (data.status === 'error') {
         setResult(`❌ ${data.error}`)
       } else {

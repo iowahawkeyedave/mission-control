@@ -36,14 +36,19 @@ export default function ChatWidget() {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (detail?.message) {
-        setInput(detail.message)
         setOpen(true)
         // Auto-send if requested
         if (detail.autoSend) {
+          // Directly add to messages and send via API
           setTimeout(() => {
-            const btn = document.querySelector('[data-chat-send]') as HTMLButtonElement
-            btn?.click()
+            setInput(detail.message)
+            setTimeout(() => {
+              const btn = document.querySelector('[data-chat-send]') as HTMLButtonElement
+              btn?.click()
+            }, 150)
           }, 100)
+        } else {
+          setInput(detail.message)
         }
       } else {
         setOpen(true)
