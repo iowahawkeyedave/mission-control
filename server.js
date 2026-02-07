@@ -1009,23 +1009,89 @@ app.post('/api/aws/generate-image', async (req, res) => {
     const util = require('util');
     const execPromise = util.promisify(require('child_process').exec);
     const timestamp = Date.now();
-    const outPath = `/tmp/mc-image-${timestamp}.png`;
 
-    // Use AWS CLI to invoke Bedrock image model
-    const payload = JSON.stringify({
-      textToImageParams: { text: prompt },
-      imageGenerationConfig: { numberOfImages: 1, height: 1024, width: 1024 }
-    });
+    // Build payload based on model provider
+    let payload;
+    if (modelId.startsWith('amazon.nova-canvas') || modelId.startsWith('amazon.titan-image')) {
+      payload = {
+        taskType: 'TEXT_IMAGE',
+        textToImageParams: { text: prompt },
+        imageGenerationConfig: { numberOfImages: 1, height: 1024, width: 1024 }
+      };
+    } else if (modelId.startsWith('stability.')) {
+      payload = {
+        prompt: prompt,
+        mode: 'text-to-image',
+        output_format: 'png'
+      };
+    } else {
+      return res.status(400).json({ error: `Unsupported image model: ${modelId}` });
+    }
 
-    const { stdout } = await execPromise(
-      `aws bedrock-runtime invoke-model --model-id "${modelId}" --content-type "application/json" --accept "application/json" --body '${payload.replace(/'/g, "\\'")}' ${outPath} 2>&1`,
-      { timeout: 30000 }
+    const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64');
+    const outFile = `/tmp/mc-image-${timestamp}.json`;
+
+    await execPromise(
+      `aws bedrock-runtime invoke-model --model-id "${modelId}" --content-type "application/json" --accept "application/json" --body "${payloadB64}" ${outFile}`,
+      { timeout: 60000 }
     );
 
-    res.json({ ok: true, message: `Image generated! Saved to ${outPath}`, path: outPath });
+    // Parse response and save image
+    const result = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+    let imageB64;
+    if (result.images && result.images[0]) {
+      imageB64 = result.images[0];
+    } else if (result.image) {
+      imageB64 = result.image;
+    } else {
+      return res.status(500).json({ error: 'No image in response', keys: Object.keys(result) });
+    }
+
+    const imgPath = `/tmp/mc-image-${timestamp}.png`;
+    fs.writeFileSync(imgPath, Buffer.from(imageB64, 'base64'));
+
+    // Serve the image
+    res.json({
+      ok: true,
+      message: `Image generated with ${modelId}!`,
+      imageUrl: `/api/aws/image/${timestamp}`,
+      path: imgPath,
+    });
   } catch (error) {
     console.error('Image gen error:', error);
-    res.status(500).json({ error: 'Image generation failed — try via Zinbot chat instead' });
+    res.status(500).json({ error: error.message || 'Image generation failed' });
+  }
+});
+
+// Serve generated images
+app.get('/api/aws/image/:id', (req, res) => {
+  const imgPath = `/tmp/mc-image-${req.params.id}.png`;
+  if (fs.existsSync(imgPath)) {
+    res.type('png').sendFile(imgPath);
+  } else {
+    res.status(404).json({ error: 'Image not found' });
+  }
+});
+
+// List all generated images
+app.get('/api/aws/gallery', (req, res) => {
+  try {
+    const files = fs.readdirSync('/tmp')
+      .filter(f => f.startsWith('mc-image-') && f.endsWith('.png'))
+      .map(f => {
+        const id = f.replace('mc-image-', '').replace('.png', '');
+        const stat = fs.statSync(`/tmp/${f}`);
+        return {
+          id,
+          url: `/api/aws/image/${id}`,
+          created: stat.mtime.toISOString(),
+          size: stat.size,
+        };
+      })
+      .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    res.json({ images: files });
+  } catch (error) {
+    res.json({ images: [] });
   }
 });
 

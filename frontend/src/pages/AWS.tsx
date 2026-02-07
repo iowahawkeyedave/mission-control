@@ -51,11 +51,15 @@ const CATEGORY_FILTERS: { id: ModelCategory; label: string; icon: any; match: (m
 function getModelAction(m: BedrockModel): { label: string; type: 'agent' | 'image' | 'tts' | 'none'; color: string } {
   const out = m.outputModalities || []
   const inp = m.inputModalities || []
-  if (out.includes('IMAGE')) return { label: 'Generate Image', type: 'image', color: '#BF5AF2' }
-  if (out.includes('VIDEO')) return { label: 'Generate Video', type: 'none', color: '#FF9500' }
+  // Only Amazon models (Nova Canvas, Titan Image Gen) support text-to-image via our API
+  if (out.includes('IMAGE') && (m.modelId.startsWith('amazon.nova-canvas') || m.modelId.startsWith('amazon.titan-image'))) {
+    return { label: 'Generate Image', type: 'image', color: '#BF5AF2' }
+  }
+  if (out.includes('IMAGE')) return { label: 'Image Tool', type: 'none', color: '#BF5AF2' } // Stability needs input image
+  if (out.includes('VIDEO')) return { label: 'Video Gen', type: 'none', color: '#FF9500' }
   if (out.includes('SPEECH')) return { label: 'Text to Speech', type: 'tts', color: '#32D74B' }
-  if (out.includes('EMBEDDING')) return { label: 'Embeddings Only', type: 'none', color: '#8E8E93' }
-  if (out.includes('TEXT') && inp.includes('TEXT')) return { label: 'Use as Agent Model', type: 'agent', color: '#007AFF' }
+  if (out.includes('EMBEDDING')) return { label: 'Embedding', type: 'none', color: '#8E8E93' }
+  if (out.includes('TEXT') && inp.includes('TEXT')) return { label: 'Use as Agent', type: 'agent', color: '#007AFF' }
   return { label: 'View', type: 'none', color: '#8E8E93' }
 }
 
@@ -68,8 +72,10 @@ export default function AWS() {
   const [actionStatus, setActionStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [actionMessage, setActionMessage] = useState('')
   const [imagePrompt, setImagePrompt] = useState('')
+  const [generatedImageUrl, setGeneratedImageUrl] = useState('')
   const [ttsText, setTtsText] = useState('')
   const [testingService, setTestingService] = useState<string | null>(null)
+  const { data: galleryData } = useApi<{ images: { id: string; url: string; created: string; size: number }[] }>('/api/aws/gallery', 10000)
   const [testResults, setTestResults] = useState<Record<string, string>>({})
 
   if (awsLoading) {
@@ -128,19 +134,22 @@ export default function AWS() {
   const handleGenerateImage = async (modelId: string, prompt: string) => {
     if (!prompt.trim()) return
     setActionStatus('loading')
+    setGeneratedImageUrl('')
+    setActionMessage('Generating... this takes 10-30 seconds')
     try {
       const res = await fetch('/api/aws/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ modelId, prompt }),
       })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await res.json()
+      if (res.ok && data.imageUrl) {
         setActionStatus('success')
-        setActionMessage(data.message || `Image generated with ${modelId}`)
+        setActionMessage(data.message)
+        setGeneratedImageUrl(data.imageUrl)
       } else {
         setActionStatus('error')
-        setActionMessage('Image generation failed')
+        setActionMessage(data.error || 'Image generation failed')
       }
     } catch (e: any) {
       setActionStatus('error')
@@ -311,7 +320,7 @@ export default function AWS() {
                         const action = getModelAction(m)
                         return (
                           <motion.div key={m.modelId} whileHover={{ scale: 1.02 }}
-                            onClick={() => { setSelectedModel(m); setActionStatus('idle'); setActionMessage(''); setImagePrompt(''); setTtsText('') }}
+                            onClick={() => { setSelectedModel(m); setActionStatus('idle'); setActionMessage(''); setImagePrompt(''); setGeneratedImageUrl(''); setTtsText('') }}
                             style={{
                               padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
                               background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
@@ -344,6 +353,40 @@ export default function AWS() {
             )}
           </div>
         </GlassCard>
+
+        {/* Image Gallery */}
+        {galleryData && galleryData.images.length > 0 && (
+          <GlassCard delay={0.3} noPad>
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h2 style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Image size={16} style={{ color: '#BF5AF2' }} /> Generated Images ({galleryData.images.length})
+                </h2>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                {galleryData.images.map((img) => (
+                  <motion.div
+                    key={img.id}
+                    whileHover={{ scale: 1.03 }}
+                    style={{
+                      borderRadius: 12, overflow: 'hidden', cursor: 'pointer',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'rgba(255,255,255,0.03)',
+                    }}
+                    onClick={() => window.open(img.url, '_blank')}
+                  >
+                    <img src={img.url} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+                    <div style={{ padding: '8px 10px' }}>
+                      <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
+                        {new Date(img.created).toLocaleString()} · {(img.size / 1024).toFixed(0)}KB
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </GlassCard>
+        )}
 
         {/* Model Action Modal */}
         <AnimatePresence>
@@ -439,12 +482,18 @@ export default function AWS() {
                           disabled={actionStatus === 'loading' || !imagePrompt.trim()}
                           style={{
                             width: '100%', padding: '12px 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                            background: !imagePrompt.trim() ? 'rgba(255,255,255,0.1)' : 'rgba(191,90,242,0.8)',
+                            background: !imagePrompt.trim() ? 'rgba(255,255,255,0.1)' : actionStatus === 'loading' ? 'rgba(191,90,242,0.4)' : 'rgba(191,90,242,0.8)',
                             color: '#fff', fontSize: 13, fontWeight: 500,
-                            opacity: actionStatus === 'loading' ? 0.6 : 1,
+                            opacity: actionStatus === 'loading' ? 0.7 : 1,
                           }}
                         >
-                          {actionStatus === 'loading' ? 'Generating...' : 'Generate Image'}
+                          {actionStatus === 'loading' ? '⏳ Generating...' : 'Generate Image'}
+                        </button>
+                        {generatedImageUrl && (
+                          <div style={{ marginTop: 16, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <img src={generatedImageUrl} alt="Generated" style={{ width: '100%', display: 'block' }} />
+                          </div>
+                        )}
                         </button>
                       </div>
                     )}
