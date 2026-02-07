@@ -10,7 +10,19 @@
 const fs = require('fs');
 const path = require('path');
 
-const BRAVE_API_KEY = 'BSAXySWcgWqzDfU2GUVBNZ2XfCcUtLx';
+const BRAVE_API_KEY = (() => {
+  // Try mc-config.json first, then ~/.config/brave/api_key, then hardcoded fallback
+  try {
+    const mc = JSON.parse(fs.readFileSync(path.join(__dirname, 'mc-config.json'), 'utf8'));
+    if (mc.scout?.braveApiKey) return mc.scout.braveApiKey;
+  } catch {}
+  try {
+    const keyFile = path.join(process.env.HOME || '/home/ubuntu', '.config/brave/api_key');
+    const key = fs.readFileSync(keyFile, 'utf8').trim();
+    if (key) return key;
+  } catch {}
+  return 'BSAXySWcgWqzDfU2GUVBNZ2XfCcUtLx';
+})();
 const RESULTS_FILE = path.join(__dirname, 'scout-results.json');
 const MAX_RESULTS_PER_QUERY = 5;
 const MAX_TOTAL = 50;

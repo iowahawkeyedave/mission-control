@@ -1810,6 +1810,19 @@ app.post('/api/setup', (req, res) => {
       console.log('[Setup] Cleared scout results for fresh scan');
     }
     
+    // Auto-trigger first scout scan in background (if scout enabled and queries exist)
+    if (scout?.enabled && scout?.queries?.length) {
+      setTimeout(() => {
+        try {
+          const { execFile } = require('child_process');
+          execFile('node', [path.join(__dirname, 'scout-engine.js')], { timeout: 60000 }, (err) => {
+            if (err) console.error('[Setup] Scout scan failed:', err.message);
+            else console.log('[Setup] First scout scan completed');
+          });
+        } catch (e) { console.warn('[Setup] Could not trigger scout scan'); }
+      }, 1000);
+    }
+    
     // Return sanitized config
     const safe = JSON.parse(JSON.stringify(mcConfig));
     if (safe.gateway) safe.gateway = { port: safe.gateway.port };

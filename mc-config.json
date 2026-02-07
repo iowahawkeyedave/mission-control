@@ -1,6 +1,6 @@
 {
-  "name": "Zinbot HQ",
-  "subtitle": "Mission Control",
+  "name": "Zinbot Control",
+  "subtitle": "Zinbot Control",
   "modules": {
     "dashboard": true,
     "chat": true,
@@ -12,27 +12,48 @@
     "agents": true,
     "settings": true,
     "skills": true,
-    "aws": true
+    "aws": false
   },
   "gateway": {
     "port": 18789,
     "token": "mc-zinbot-2026"
   },
   "aws": {
-    "enabled": true,
-    "bucket": "zinbot-resources-239541130189",
+    "enabled": false,
+    "bucket": "",
     "region": "us-east-1"
   },
   "notion": {
-    "enabled": true,
-    "dbId": "c540b580-22b5-4481-b33d-e55585d76771",
-    "token": "ntn_R18444199542F0vXHK0KOITqdSPpebU5GfT2rTJMAS1hpC"
+    "enabled": false,
+    "dbId": "",
+    "token": ""
   },
   "scout": {
     "enabled": true,
-    "braveApiKey": ""
+    "braveApiKey": "",
+    "queries": [
+      {
+        "q": "site:github.com openclaw skill OR plugin",
+        "category": "openclaw-github",
+        "source": "github",
+        "weight": 1
+      },
+      {
+        "q": "clawhub.com skill OR \"new skill\" OR automation",
+        "category": "openclaw-skills",
+        "source": "web",
+        "weight": 1
+      },
+      {
+        "q": "site:x.com openclaw \"new feature\" OR \"just shipped\" OR \"tip\"",
+        "category": "openclaw",
+        "source": "twitter",
+        "weight": 1
+      }
+    ],
+    "schedule": "daily"
   },
-  "workspace": "/home/ubuntu/clawd",
-  "skillsPath": "/home/ubuntu/clawd/skills",
-  "memoryPath": "/home/ubuntu/clawd/memory"
+  "workspace": "",
+  "skillsPath": "",
+  "memoryPath": ""
 }
