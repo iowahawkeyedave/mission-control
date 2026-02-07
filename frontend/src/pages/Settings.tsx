@@ -100,6 +100,117 @@ export default function Settings() {
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0,122,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Cpu size={18} style={{ color: '#007AFF' }} />
                 </div>
+                <h2 style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>Primary Model</h2>
+              </div>
+
+              <div style={{ position: 'relative', marginBottom: 24 }}>
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+                    padding: '16px 20px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.92)', fontSize: 14,
+                    cursor: 'pointer', transition: 'all 0.2s',
+                  }}
+                >
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontWeight: 600 }}>{getCurrentModelName()}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
+                      {availableModels.find(m => m.id === selectedModel)?.description || 'Current model'}
+                    </div>
+                  </div>
+                  <ChevronDown size={16} style={{ transform: showDropdown ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                </button>
+
+                {showDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                      marginTop: 8, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'rgba(20,20,20,0.95)', backdropFilter: 'blur(20px)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+                    }}
+                  >
+                    {availableModels.map((model) => (
+                      <button
+                        key={model.id}
+                        onClick={() => { setSelectedModel(model.id); setShowDropdown(false) }}
+                        style={{
+                          width: '100%', textAlign: 'left', padding: '14px 20px',
+                          borderBottom: '1px solid rgba(255,255,255,0.05)',
+                          background: selectedModel === model.id ? 'rgba(0,122,255,0.1)' : 'transparent',
+                          color: 'rgba(255,255,255,0.92)', cursor: 'pointer', transition: 'all 0.15s',
+                          borderRadius: 0,
+                          border: 'none'
+                        }}
+                      >
+                        <div style={{ fontWeight: 600 }}>{model.name}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{model.description}</div>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </div>
+
+              {selectedModel !== configData?.model && (
+                <button
+                  onClick={handleModelSwitch}
+                  disabled={saving || selectedModel === configData?.model}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '12px 20px', borderRadius: 10, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+                    background: saving ? 'rgba(0,122,255,0.3)' : '#007AFF',
+                    color: '#fff', fontSize: 14, fontWeight: 600,
+                    opacity: saving ? 0.5 : 1,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                      <span>Switching...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      <span>Switch Model</span>
+                    </>
+                  )}
+                </button>
+              )}
+
+              {saveStatus === 'success' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, color: '#32D74B', fontSize: 12 }}>
+                  <span className="status-dot status-dot-green" />
+                  Model switched successfully
+                </div>
+              )}
+              {saveStatus === 'error' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, color: '#FF453A', fontSize: 12 }}>
+                  <span className="status-dot status-dot-red" />
+                  Failed to switch model
+                </div>
+              )}
+
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 12, lineHeight: 1.5 }}>
+                Current: {configData?.model ? getCurrentModelName() : 'Unknown'}
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Model Routing Card */}
+          <ModelRoutingCard isMobile={isMobile} />
+
+          {/* OpenClaw Configuration Card */}
+          <GlassCard noPad>
+            <div style={{ padding: isMobile ? 16 : 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0,122,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Cpu size={18} style={{ color: '#007AFF' }} />
+                </div>
                 <h2 style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>Model Configuration</h2>
               </div>
 
@@ -265,6 +376,30 @@ function ModelRoutingCard({ isMobile }: { isMobile: boolean }) {
   const [routing, setRouting] = useState({ main: '', subagent: '', heartbeat: '' })
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  
+  // Load current model from /api/status
+  const { data: statusData } = useApi<any>('/api/status')
+
+  useEffect(() => {
+    if (statusData?.agent?.model) {
+      // Extract the full model ID from the current agent model
+      const currentModel = statusData.agent.model
+      // Map display names back to full model IDs (best effort)
+      const modelMapping: Record<string, string> = {
+        'Claude Opus 4': 'us.anthropic.claude-opus-4-6-v1',
+        'Claude Sonnet 4': 'us.anthropic.claude-sonnet-4-20250514-v1:0',
+        'Claude Haiku 4.5': 'us.anthropic.claude-haiku-4-5-20251001-v1:0'
+      }
+      
+      const fullModelId = modelMapping[currentModel] || currentModel
+      setRouting(prev => ({
+        ...prev,
+        main: fullModelId,
+        subagent: prev.subagent || 'us.anthropic.claude-sonnet-4-20250514-v1:0',
+        heartbeat: prev.heartbeat || 'us.anthropic.claude-haiku-4-5-20251001-v1:0'
+      }))
+    }
+  }, [statusData])
 
   const handleSave = async () => {
     setSaving(true)

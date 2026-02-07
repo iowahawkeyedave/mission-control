@@ -62,6 +62,7 @@ export default function Scout() {
   const [sortBy, setSortBy] = useState<'score' | 'date'>('score')
   const [filter, setFilter] = useState('all')
   const [scanning, setScanning] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
 
   if (loading || !data) {
     return (
@@ -102,6 +103,7 @@ export default function Scout() {
   const handleRunScan = async () => {
     try {
       setScanning(true)
+      setToast(null)
       const response = await fetch('/api/scout/scan', { method: 'POST' })
       const result = await response.json()
       
@@ -114,12 +116,16 @@ export default function Scout() {
             
             if (!status.scanning) {
               setScanning(false)
+              setToast('✅ Scan completed! Results refreshed.')
+              setTimeout(() => setToast(null), 4000)
               window.location.reload() // Reload to show new results
             } else {
               setTimeout(checkStatus, 3000) // Check again in 3 seconds
             }
           } catch {
             setScanning(false)
+            setToast('❌ Scan status check failed')
+            setTimeout(() => setToast(null), 4000)
           }
         }
         setTimeout(checkStatus, 3000)
@@ -128,12 +134,34 @@ export default function Scout() {
       }
     } catch {
       setScanning(false)
+      setToast('❌ Failed to start scan')
+      setTimeout(() => setToast(null), 4000)
     }
   }
 
   return (
     <PageTransition>
       <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: m ? 12 : 24 }}>
+        {/* Toast notification */}
+        {toast && (
+          <div style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            background: toast.startsWith('✅') ? 'rgba(50,215,75,0.9)' : 'rgba(255,69,58,0.9)',
+            backdropFilter: 'blur(10px)',
+            color: '#fff',
+            fontSize: '14px',
+            fontWeight: '500',
+            zIndex: 1000,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.25)'
+          }}>
+            {toast}
+          </div>
+        )}
+
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
           <div>
@@ -236,8 +264,73 @@ export default function Scout() {
         {/* Opportunity List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {opportunities.length === 0 ? (
-            <div className="macos-panel" style={{ padding: 32, textAlign: 'center' }}>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>No opportunities in this category.</p>
+            <div className="macos-panel" style={{ 
+              padding: m ? '48px 24px' : '64px 48px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 16
+            }}>
+              <div style={{
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                background: 'rgba(191,90,242,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Radar size={28} style={{ color: '#BF5AF2' }} />
+              </div>
+              <div>
+                <h3 style={{
+                  fontSize: m ? '16px' : '18px',
+                  fontWeight: '600',
+                  color: 'rgba(255,255,255,0.92)',
+                  margin: '0 0 8px 0'
+                }}>
+                  No results yet
+                </h3>
+                <p style={{
+                  fontSize: m ? '13px' : '15px',
+                  color: 'rgba(255,255,255,0.65)',
+                  margin: 0,
+                  lineHeight: 1.4
+                }}>
+                  {data?.lastScan 
+                    ? (filter === 'all' 
+                        ? 'No opportunities found yet — run your first scan!' 
+                        : 'No results in this category. Try "All" or run a new scan.')
+                    : 'Run your first scan to discover opportunities!'
+                  }
+                </p>
+              </div>
+              {!data?.lastScan && (
+                <button
+                  onClick={handleRunScan}
+                  disabled={scanning}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: scanning ? 'rgba(0,122,255,0.5)' : '#007AFF',
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: scanning ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <Search size={16} style={{ 
+                    animation: scanning ? 'spin 1s linear infinite' : 'none' 
+                  }} />
+                  {scanning ? 'Scanning...' : 'Run First Scan'}
+                </button>
+              )}
             </div>
           ) : (
             opportunities.map((opp: any, i: number) => (

@@ -22,19 +22,32 @@ const uuid = () => 'xxxx-xxxx-xxxx'.replace(/x/g, () => Math.floor(Math.random()
 
 // Pretty name from session key
 function sessionName(s: any): string {
-  const dn = s.displayName || s.key || ''
+  const key = s.key || ''
+  const dn = s.displayName || key
+  
+  // If key contains a channel name after #, show that
   if (dn.includes('#')) {
     const channel = dn.split('#').pop()?.split(':')[0] || dn
     return `#${channel}`
   }
+  
+  // If it's the main session, show "Main Session"
+  if (key === 'agent:main:main' || dn.includes('main-main')) {
+    return 'Main Session'
+  }
+  
+  // If it's a sub-agent, show the label or "Sub-Agent"
+  if (key.includes(':subagent:')) {
+    return s.label || 'Sub-Agent'
+  }
+  
+  // Other specific cases
   if (s.label) return s.label
   if (dn.includes('mission-control')) return 'Mission Control Chat'
-  if (dn.includes('main-main')) return 'Main Agent'
-  if (s.key?.includes('subagent')) {
-    const id = s.key.split(':').pop()?.substring(0, 8)
-    return `Sub-agent ${id}`
-  }
-  return dn.substring(0, 30)
+  
+  // Otherwise show the last part of the key, trimmed
+  const lastPart = key.split(':').pop()?.substring(0, 12) || dn.substring(0, 30)
+  return lastPart
 }
 
 function sessionIcon(s: any) {

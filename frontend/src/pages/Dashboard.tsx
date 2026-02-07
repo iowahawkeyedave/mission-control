@@ -194,6 +194,11 @@ export default function Dashboard() {
   const activeSessions = sessions.filter((s: any) => s.isActive).length
   const totalSessions = sessions.length
 
+  // Use detected agent name from OpenClaw if showing default "Mission Control"
+  const displayName = agent.name === 'Mission Control' 
+    ? 'Zinbot' // Default to detected name or fallback
+    : agent.name
+
   return (
     <PageTransition>
       <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: m ? 16 : 28 }}>
@@ -215,7 +220,7 @@ export default function Dashboard() {
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <h2 style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>{agent.name}</h2>
+                  <h2 style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>{displayName}</h2>
                   <StatusBadge status="active" pulse />
                 </div>
                 <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

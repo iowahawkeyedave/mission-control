@@ -22,6 +22,49 @@ interface TokenData {
   budget?: { monthly: number }
 }
 
+interface SessionData {
+  key: string
+  model: string
+  totalTokens: number
+  updatedAt: string | null
+  displayName?: string
+}
+
+interface ConfigData {
+  modules: {
+    aws?: boolean
+    [key: string]: any
+  }
+}
+
+// Estimate cost from tokens based on model
+function estimateCost(tokens: number, model?: string) {
+  // Approximate costs per 1M tokens (blended input/output)
+  const rates = {
+    'opus': 45,    // ~$15 input + $75 output, blended ~$45/M
+    'sonnet': 9,   // ~$3 input + $15 output, blended ~$9/M  
+    'haiku': 1,    // ~$0.25 input + $1.25 output, blended ~$1/M
+  };
+  const modelLower = (model || '').toLowerCase();
+  const rate = modelLower.includes('opus') ? rates.opus 
+    : modelLower.includes('sonnet') ? rates.sonnet 
+    : modelLower.includes('haiku') ? rates.haiku 
+    : rates.sonnet; // default to sonnet
+  return (tokens / 1000000) * rate;
+}
+
+// Format session name for better display
+function formatSessionName(key: string, displayName?: string): string {
+  if (key.includes('#')) {
+    const channelName = key.split('#')[1];
+    return `#${channelName}`;
+  }
+  if (key === 'agent:main:main') return 'Main Session';
+  if (key.includes(':subagent:')) return 'Sub-Agent';
+  if (displayName) return displayName;
+  return key.split(':').pop()?.substring(0, 12) || 'Unknown';
+}
+
 export default function Costs() {
   const m = useIsMobile()
 
@@ -34,6 +77,8 @@ export default function Costs() {
   }
   const [awsCosts, setAwsCosts] = useState<AWSSCostData | null>(null)
   const [tokenData, setTokenData] = useState<TokenData | null>(null)
+  const [config, setConfig] = useState<ConfigData | null>(null)
+  const [sessions, setSessions] = useState<SessionData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [budget, setBudget] = useState<number>(0)
@@ -42,14 +87,18 @@ export default function Costs() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/aws/costs').then(r => r.json()),
-      fetch('/api/costs').then(r => r.json())
+      fetch('/api/aws/costs').then(r => r.json()).catch(() => null),
+      fetch('/api/costs').then(r => r.json()).catch(() => null),
+      fetch('/api/config').then(r => r.json()).catch(() => ({ modules: {} })),
+      fetch('/api/sessions').then(r => r.json()).catch(() => ({ sessions: [] }))
     ])
-    .then(([aws, tokens]) => {
+    .then(([aws, tokens, configData, sessionsData]) => {
       setAwsCosts(aws)
       setTokenData(tokens)
-      setBudget(tokens.budget?.monthly || 0)
-      setBudgetInput((tokens.budget?.monthly || 0).toString())
+      setConfig(configData)
+      setSessions(sessionsData.sessions || [])
+      setBudget(tokens?.budget?.monthly || 0)
+      setBudgetInput((tokens?.budget?.monthly || 0).toString())
       setLoading(false)
     })
     .catch(err => {
@@ -92,7 +141,7 @@ export default function Costs() {
     )
   }
 
-  if (error || !awsCosts || !tokenData) {
+  if (error || (!awsCosts && !tokenData)) {
     return (
       <PageTransition>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px', flexDirection: 'column', gap: '16px' }}>
@@ -103,12 +152,25 @@ export default function Costs() {
     )
   }
 
-  // Calculate metrics
-  const dailyAvg = awsCosts.daily.reduce((sum, d) => sum + d.cost, 0) / Math.max(awsCosts.daily.length, 1)
-  const projectedMonthly = dailyAvg * 30
-  const creditsUsed = awsCosts.credits - awsCosts.remaining
-  const burnRate = creditsUsed > 0 ? awsCosts.remaining / (creditsUsed / awsCosts.daily.length) : Infinity
+  // Check if AWS module is enabled
+  const isAwsEnabled = config?.modules?.aws === true
   
+  // Calculate metrics with fallback to token-based estimates
+  const hasAwsData = awsCosts && awsCosts.total > 0
+  const totalTokens = sessions.reduce((sum, s) => sum + (s.totalTokens || 0), 0)
+  const tokenBasedCost = estimateCost(totalTokens, 'sonnet')
+  
+  const currentMonthCost = hasAwsData ? awsCosts.total : tokenBasedCost
+  const dailyAvg = hasAwsData 
+    ? awsCosts.daily.reduce((sum, d) => sum + d.cost, 0) / Math.max(awsCosts.daily.length, 1)
+    : tokenBasedCost / 30
+  const projectedMonthly = dailyAvg * 30
+  
+  // Credits data - only show if AWS enabled
+  const creditsUsed = hasAwsData ? awsCosts.credits - awsCosts.remaining : 0
+  const burnRate = hasAwsData && creditsUsed > 0 
+    ? awsCosts.remaining / (creditsUsed / awsCosts.daily.length) 
+    : Infinity
   // Color bars for daily chart
   const getBarColor = (cost: number) => {
     if (cost < 10) return '#32D74B'
@@ -121,9 +183,23 @@ export default function Costs() {
     const lowerName = name.toLowerCase()
     if (lowerName.includes('compute') || lowerName.includes('ec2') || lowerName.includes('lambda')) return '#007AFF'
     if (lowerName.includes('claude') || lowerName.includes('ai') || lowerName.includes('bedrock')) return '#BF5AF2'
-    if (lowerName.includes('s3') || lowerName.includes('storage')) return '#FF9500'
+    if (lowerName.includes('s3') || lowerName.includes('storage')) return '#32D74B'
     return '#32D74B'
   }
+
+  // Get top 5 sessions by token usage for display
+  const topSessions = sessions
+    .filter(s => s.totalTokens > 0)
+    .sort((a, b) => b.totalTokens - a.totalTokens)
+    .slice(0, 5)
+    .map(s => ({
+      sessionId: s.key,
+      sessionName: formatSessionName(s.key, s.displayName),
+      model: s.model?.replace('us.anthropic.', '')?.replace(/claude-(\w+)-[\d-]+.*/, 'Claude $1') || 'Unknown',
+      tokens: s.totalTokens,
+      cost: estimateCost(s.totalTokens, s.model),
+      timestamp: s.updatedAt ? new Date(s.updatedAt).getTime() / 1000 : Date.now() / 1000
+    }))
 
   return (
     <PageTransition>
@@ -160,7 +236,7 @@ export default function Costs() {
         </div>
 
         {/* Cost Alert Banner */}
-        {budget > 0 && awsCosts && (awsCosts.total / budget) > 0.8 && (
+        {budget > 0 && currentMonthCost && (currentMonthCost / budget) > 0.8 && (
           <div style={{
             padding: m ? '12px 16px' : '16px 20px',
             background: 'rgba(255, 149, 0, 0.15)',
@@ -176,7 +252,7 @@ export default function Costs() {
               color: 'rgba(255,255,255,0.92)', 
               fontWeight: '500' 
             }}>
-              ⚠️ You've used {Math.round((awsCosts.total / budget) * 100)}% of your ${budget} monthly budget
+              ⚠️ You've used {Math.round((currentMonthCost / budget) * 100)}% of your ${budget} monthly budget
             </span>
           </div>
         )}
@@ -184,7 +260,7 @@ export default function Costs() {
         {/* Row 1: Key Metrics */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: m ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
+          gridTemplateColumns: isAwsEnabled && hasAwsData ? (m ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)') : (m ? '1fr' : 'repeat(3, 1fr)'), 
           gap: m ? '12px' : '20px' 
         }}>
           <GlassCard delay={0} noPad>
@@ -194,13 +270,13 @@ export default function Costs() {
                   width: m ? '40px' : '48px', 
                   height: m ? '40px' : '48px', 
                   borderRadius: '12px', 
-                  background: awsCosts.total > 100 ? 'rgba(255,149,0,0.15)' : 'rgba(50,215,75,0.15)',
+                  background: currentMonthCost > 100 ? 'rgba(255,149,0,0.15)' : 'rgba(50,215,75,0.15)',
                   border: '1px solid rgba(255,255,255,0.1)', 
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center' 
                 }}>
-                  <DollarSign size={m ? 16 : 20} style={{ color: awsCosts.total > 100 ? '#FF9500' : '#32D74B' }} />
+                  <DollarSign size={m ? 16 : 20} style={{ color: currentMonthCost > 100 ? '#FF9500' : '#32D74B' }} />
                 </div>
                 <span style={{ 
                   fontSize: m ? '10px' : '11px', 
@@ -220,48 +296,60 @@ export default function Costs() {
                 fontFeatureSettings: '"tnum"', 
                 margin: '0' 
               }}>
-                <AnimatedCounter end={awsCosts.total} decimals={2} prefix="$" />
+                <AnimatedCounter end={currentMonthCost} decimals={2} prefix="$" />
               </p>
+              {!hasAwsData && (
+                <div style={{ 
+                  fontSize: '11px', 
+                  color: 'rgba(255,255,255,0.45)', 
+                  marginTop: '8px' 
+                }}>
+                  Token-based estimate
+                </div>
+              )}
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.05} noPad>
-            <div style={{ padding: m ? '16px' : '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ 
-                  width: m ? '40px' : '48px', 
-                  height: m ? '40px' : '48px', 
-                  borderRadius: '12px', 
-                  background: 'rgba(50,215,75,0.15)',
-                  border: '1px solid rgba(255,255,255,0.1)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center' 
-                }}>
-                  <Target size={m ? 16 : 20} style={{ color: '#32D74B' }} />
+          {/* Credits Left - only show if AWS module is enabled and has data */}
+          {isAwsEnabled && hasAwsData && awsCosts && (
+            <GlassCard delay={0.05} noPad>
+              <div style={{ padding: m ? '16px' : '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <div style={{ 
+                    width: m ? '40px' : '48px', 
+                    height: m ? '40px' : '48px', 
+                    borderRadius: '12px', 
+                    background: 'rgba(50,215,75,0.15)',
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center' 
+                  }}>
+                    <Target size={m ? 16 : 20} style={{ color: '#32D74B' }} />
+                  </div>
+                  <span style={{ 
+                    fontSize: m ? '10px' : '11px', 
+                    fontWeight: '700', 
+                    color: 'rgba(255,255,255,0.45)', 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.1em' 
+                  }}>
+                    {labels.creditsLeft}
+                  </span>
                 </div>
-                <span style={{ 
-                  fontSize: m ? '10px' : '11px', 
-                  fontWeight: '700', 
-                  color: 'rgba(255,255,255,0.45)', 
-                  textTransform: 'uppercase', 
-                  letterSpacing: '0.1em' 
+                <p style={{ 
+                  fontSize: m ? '24px' : '32px', 
+                  fontWeight: '300', 
+                  color: 'rgba(255,255,255,0.92)', 
+                  fontFamily: 'system-ui', 
+                  fontFeatureSettings: '"tnum"', 
+                  margin: '0' 
                 }}>
-                  {labels.creditsLeft}
-                </span>
+                  <AnimatedCounter end={awsCosts.remaining} decimals={0} prefix="$" />
+                </p>
               </div>
-              <p style={{ 
-                fontSize: m ? '24px' : '32px', 
-                fontWeight: '300', 
-                color: 'rgba(255,255,255,0.92)', 
-                fontFamily: 'system-ui', 
-                fontFeatureSettings: '"tnum"', 
-                margin: '0' 
-              }}>
-                <AnimatedCounter end={awsCosts.remaining} decimals={0} prefix="$" />
-              </p>
-            </div>
-          </GlassCard>
+            </GlassCard>
+          )}
 
           <GlassCard delay={0.1} noPad>
             <div style={{ padding: m ? '16px' : '24px' }}>
@@ -403,7 +491,7 @@ export default function Costs() {
               </button>
             </div>
 
-            {budget > 0 && awsCosts && (
+            {budget > 0 && (
               <div style={{ marginTop: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.65)' }}>
@@ -415,16 +503,16 @@ export default function Costs() {
                     fontFamily: 'system-ui', 
                     fontFeatureSettings: '"tnum"' 
                   }}>
-                    ${awsCosts.total.toFixed(2)} / ${budget}
+                    ${currentMonthCost.toFixed(2)} / ${budget}
                   </span>
                 </div>
                 
                 <div style={{ height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
                   <div
                     style={{
-                      width: `${Math.min((awsCosts.total / budget) * 100, 100)}%`,
+                      width: `${Math.min((currentMonthCost / budget) * 100, 100)}%`,
                       height: '100%',
-                      background: (awsCosts.total / budget) > 0.9 ? '#FF453A' : (awsCosts.total / budget) > 0.7 ? '#FF9500' : '#32D74B',
+                      background: (currentMonthCost / budget) > 0.9 ? '#FF453A' : (currentMonthCost / budget) > 0.7 ? '#FF9500' : '#32D74B',
                       borderRadius: '4px',
                       transition: 'all 0.6s ease'
                     }}
@@ -433,10 +521,10 @@ export default function Costs() {
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
                   <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>
-                    {Math.round((awsCosts.total / budget) * 100)}% used
+                    {Math.round((currentMonthCost / budget) * 100)}% used
                   </span>
                   <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>
-                    ${(budget - awsCosts.total).toFixed(2)} remaining
+                    ${(budget - currentMonthCost).toFixed(2)} remaining
                   </span>
                 </div>
               </div>
@@ -462,47 +550,66 @@ export default function Costs() {
               }}>
                 Daily Spend Chart
               </h3>
-              <div style={{ 
-                height: m ? '180px' : '240px', 
-                display: 'flex', 
-                alignItems: 'flex-end', 
-                gap: m ? '2px' : '4px', 
-                paddingTop: '20px' 
-              }}>
-                {awsCosts.daily.map((day, i) => {
-                  const maxCost = Math.max(...awsCosts.daily.map(d => d.cost), 10)
-                  const height = Math.max((day.cost / maxCost) * (m ? 140 : 200), 2)
-                  return (
-                    <div key={day.date} style={{ 
-                      flex: '1', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
-                      gap: '8px' 
-                    }}>
-                      <div
-                        style={{
-                          width: '100%',
-                          height: `${height}px`,
-                          background: getBarColor(day.cost),
-                          borderRadius: '4px 4px 0 0',
-                          opacity: '0.8',
-                          transition: 'all 0.3s ease'
-                        }}
-                        title={`${day.date}: $${day.cost.toFixed(2)}`}
-                      />
-                      <span style={{ 
-                        fontSize: m ? '7px' : '10px', 
-                        color: 'rgba(255,255,255,0.45)',
-                        textAlign: 'center',
-                        lineHeight: 1.1,
+              {hasAwsData && awsCosts ? (
+                <div style={{ 
+                  height: m ? '180px' : '240px', 
+                  display: 'flex', 
+                  alignItems: 'flex-end', 
+                  gap: m ? '2px' : '4px', 
+                  paddingTop: '20px' 
+                }}>
+                  {awsCosts.daily.map((day, i) => {
+                    const maxCost = Math.max(...awsCosts.daily.map(d => d.cost), 10)
+                    const height = Math.max((day.cost / maxCost) * (m ? 140 : 200), 2)
+                    return (
+                      <div key={day.date} style={{ 
+                        flex: '1', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        gap: '8px' 
                       }}>
-                        {new Date(day.date).toLocaleDateString('en-US', { day: 'numeric' })}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
+                        <div
+                          style={{
+                            width: '100%',
+                            height: `${height}px`,
+                            background: getBarColor(day.cost),
+                            borderRadius: '4px 4px 0 0',
+                            opacity: '0.8',
+                            transition: 'all 0.3s ease'
+                          }}
+                          title={`${day.date}: $${day.cost.toFixed(2)}`}
+                        />
+                        <span style={{ 
+                          fontSize: m ? '7px' : '10px', 
+                          color: 'rgba(255,255,255,0.45)',
+                          textAlign: 'center',
+                          lineHeight: 1.1,
+                        }}>
+                          {new Date(day.date).toLocaleDateString('en-US', { day: 'numeric' })}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div style={{ 
+                  height: m ? '180px' : '240px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.65)' }}>
+                    Using token-based cost estimation
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', textAlign: 'center' }}>
+                    Daily AWS cost data not available.<br />
+                    Estimated ${tokenBasedCost.toFixed(2)} this month from {totalTokens.toLocaleString()} tokens.
+                  </div>
+                </div>
+              )}
             </div>
           </GlassCard>
 
@@ -519,44 +626,86 @@ export default function Costs() {
                 Service Breakdown
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: m ? '12px' : '16px' }}>
-                {awsCosts.services.slice(0, m ? 5 : 8).map((service, i) => {
-                  const percentage = (service.cost / awsCosts.total) * 100
-                  return (
-                    <div key={service.name} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ 
-                          fontSize: m ? '12px' : '14px', 
-                          color: 'rgba(255,255,255,0.65)', 
-                          fontWeight: '500' 
-                        }}>
-                          {service.name.length > (m ? 20 : 25) 
-                            ? service.name.substring(0, m ? 20 : 25) + '...' 
-                            : service.name}
-                        </span>
-                        <span style={{ 
-                          fontSize: m ? '12px' : '14px', 
-                          color: 'rgba(255,255,255,0.92)', 
-                          fontWeight: '600', 
-                          fontFamily: 'system-ui', 
-                          fontFeatureSettings: '"tnum"' 
-                        }}>
-                          ${service.cost.toFixed(2)}
-                        </span>
+                {hasAwsData && awsCosts ? (
+                  awsCosts.services.slice(0, m ? 5 : 8).map((service, i) => {
+                    const percentage = (service.cost / awsCosts.total) * 100
+                    return (
+                      <div key={service.name} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ 
+                            fontSize: m ? '12px' : '14px', 
+                            color: 'rgba(255,255,255,0.65)', 
+                            fontWeight: '500' 
+                          }}>
+                            {service.name.length > (m ? 20 : 25) 
+                              ? service.name.substring(0, m ? 20 : 25) + '...' 
+                              : service.name}
+                          </span>
+                          <span style={{ 
+                            fontSize: m ? '12px' : '14px', 
+                            color: 'rgba(255,255,255,0.92)', 
+                            fontWeight: '600', 
+                            fontFamily: 'system-ui', 
+                            fontFeatureSettings: '"tnum"' 
+                          }}>
+                            ${service.cost.toFixed(2)}
+                          </span>
+                        </div>
+                        <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: `${percentage}%`,
+                              height: '100%',
+                              background: getServiceColor(service.name),
+                              borderRadius: '3px',
+                              transition: 'width 0.6s ease'
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div
-                          style={{
-                            width: `${percentage}%`,
-                            height: '100%',
-                            background: getServiceColor(service.name),
-                            borderRadius: '3px',
-                            transition: 'width 0.6s ease'
-                          }}
-                        />
+                    )
+                  })
+                ) : (
+                  // Token-based breakdown by channel/session type
+                  Object.entries({
+                    'OpenClaw Sessions': totalTokens > 0 ? estimateCost(totalTokens, 'sonnet') : 0
+                  }).map(([name, cost], i) => {
+                    if (cost === 0) return null
+                    return (
+                      <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ 
+                            fontSize: m ? '12px' : '14px', 
+                            color: 'rgba(255,255,255,0.65)', 
+                            fontWeight: '500' 
+                          }}>
+                            {name}
+                          </span>
+                          <span style={{ 
+                            fontSize: m ? '12px' : '14px', 
+                            color: 'rgba(255,255,255,0.92)', 
+                            fontWeight: '600', 
+                            fontFamily: 'system-ui', 
+                            fontFeatureSettings: '"tnum"' 
+                          }}>
+                            ${cost.toFixed(2)}
+                          </span>
+                        </div>
+                        <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              background: '#BF5AF2',
+                              borderRadius: '3px',
+                              transition: 'width 0.6s ease'
+                            }}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  }).filter(Boolean)
+                )}
               </div>
             </div>
           </GlassCard>
@@ -579,7 +728,7 @@ export default function Costs() {
               gridTemplateColumns: m ? '1fr' : 'repeat(auto-fit, minmax(300px, 1fr))', 
               gap: m ? '12px' : '16px' 
             }}>
-              {(tokenData.sessions || []).slice(0, m ? 4 : 6).map((session, i) => (
+              {topSessions.length > 0 ? topSessions.map((session, i) => (
                 <div key={session.sessionId} style={{ 
                   padding: m ? '12px' : '16px', 
                   background: 'rgba(255,255,255,0.05)', 
@@ -589,18 +738,18 @@ export default function Costs() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                     <div>
                       <div style={{ 
-                        fontSize: m ? '11px' : '12px', 
-                        color: 'rgba(255,255,255,0.45)', 
-                        fontFamily: 'monospace' 
+                        fontSize: m ? '12px' : '13px', 
+                        color: 'rgba(255,255,255,0.92)', 
+                        fontWeight: '500',
+                        marginBottom: '4px'
                       }}>
-                        {session.sessionId.substring(0, m ? 12 : 16)}...
+                        {session.sessionName}
                       </div>
                       <div style={{ 
-                        fontSize: m ? '12px' : '13px', 
-                        color: 'rgba(255,255,255,0.65)', 
-                        marginTop: '4px' 
+                        fontSize: m ? '11px' : '12px', 
+                        color: 'rgba(255,255,255,0.65)'
                       }}>
-                        {session.model || 'Unknown Model'}
+                        {session.model}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -628,7 +777,21 @@ export default function Costs() {
                     {new Date(session.timestamp * 1000).toLocaleString()}
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div style={{
+                  padding: m ? '32px 16px' : '48px 24px',
+                  textAlign: 'center',
+                  color: 'rgba(255,255,255,0.45)',
+                  gridColumn: '1 / -1'
+                }}>
+                  <div style={{ fontSize: m ? '14px' : '16px', marginBottom: '8px' }}>
+                    No token usage data yet
+                  </div>
+                  <div style={{ fontSize: m ? '12px' : '14px' }}>
+                    Start using OpenClaw to see session statistics here
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </GlassCard>
@@ -639,81 +802,83 @@ export default function Costs() {
           gridTemplateColumns: m ? '1fr' : '1fr 1fr', 
           gap: m ? '16px' : '24px' 
         }}>
-          {/* Credits Burn Rate */}
-          <GlassCard delay={0.35} noPad>
-            <div style={{ padding: m ? '16px' : '24px' }}>
-              <h3 style={{ 
-                fontSize: m ? '14px' : '16px', 
-                fontWeight: '600', 
-                color: 'rgba(255,255,255,0.65)', 
-                marginBottom: m ? '16px' : '24px', 
-                margin: `0 0 ${m ? '16px' : '24px'} 0` 
-              }}>
-                Credits Burn Rate
-              </h3>
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ 
-                    fontSize: m ? '12px' : '14px', 
-                    color: 'rgba(255,255,255,0.65)' 
-                  }}>
-                    Used
-                  </span>
-                  <span style={{ 
-                    fontSize: m ? '12px' : '14px', 
-                    color: 'rgba(255,255,255,0.92)', 
-                    fontFamily: 'system-ui', 
-                    fontFeatureSettings: '"tnum"' 
-                  }}>
-                    ${creditsUsed.toFixed(0)} / ${awsCosts.credits.toLocaleString()}
-                  </span>
+          {/* Credits Burn Rate - only show if AWS data available */}
+          {isAwsEnabled && hasAwsData && awsCosts && (
+            <GlassCard delay={0.35} noPad>
+              <div style={{ padding: m ? '16px' : '24px' }}>
+                <h3 style={{ 
+                  fontSize: m ? '14px' : '16px', 
+                  fontWeight: '600', 
+                  color: 'rgba(255,255,255,0.65)', 
+                  marginBottom: m ? '16px' : '24px', 
+                  margin: `0 0 ${m ? '16px' : '24px'} 0` 
+                }}>
+                  Credits Burn Rate
+                </h3>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ 
+                      fontSize: m ? '12px' : '14px', 
+                      color: 'rgba(255,255,255,0.65)' 
+                    }}>
+                      Used
+                    </span>
+                    <span style={{ 
+                      fontSize: m ? '12px' : '14px', 
+                      color: 'rgba(255,255,255,0.92)', 
+                      fontFamily: 'system-ui', 
+                      fontFeatureSettings: '"tnum"' 
+                    }}>
+                      ${creditsUsed.toFixed(0)} / ${awsCosts.credits.toLocaleString()}
+                    </span>
+                  </div>
+                  <div style={{ height: '12px', background: 'rgba(255,255,255,0.1)', borderRadius: '6px', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${(creditsUsed / awsCosts.credits) * 100}%`,
+                        height: '100%',
+                        background: creditsUsed / awsCosts.credits > 0.75 ? '#FF453A' : creditsUsed / awsCosts.credits > 0.5 ? '#FF9500' : '#32D74B',
+                        borderRadius: '6px',
+                        transition: 'width 0.6s ease'
+                      }}
+                    />
+                  </div>
                 </div>
-                <div style={{ height: '12px', background: 'rgba(255,255,255,0.1)', borderRadius: '6px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      width: `${(creditsUsed / awsCosts.credits) * 100}%`,
-                      height: '100%',
-                      background: creditsUsed / awsCosts.credits > 0.75 ? '#FF453A' : creditsUsed / awsCosts.credits > 0.5 ? '#FF9500' : '#32D74B',
-                      borderRadius: '6px',
-                      transition: 'width 0.6s ease'
-                    }}
-                  />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ 
+                      fontSize: m ? '12px' : '13px', 
+                      color: 'rgba(255,255,255,0.45)' 
+                    }}>
+                      At current rate, credits last:
+                    </span>
+                    <span style={{ 
+                      fontSize: m ? '12px' : '13px', 
+                      color: 'rgba(255,255,255,0.92)', 
+                      fontWeight: '600' 
+                    }}>
+                      {burnRate === Infinity ? '∞' : `${Math.round(burnRate)} days`}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ 
+                      fontSize: m ? '12px' : '13px', 
+                      color: 'rgba(255,255,255,0.45)' 
+                    }}>
+                      Daily burn rate:
+                    </span>
+                    <span style={{ 
+                      fontSize: m ? '12px' : '13px', 
+                      color: 'rgba(255,255,255,0.92)', 
+                      fontWeight: '600' 
+                    }}>
+                      ${dailyAvg.toFixed(2)}/day
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ 
-                    fontSize: m ? '12px' : '13px', 
-                    color: 'rgba(255,255,255,0.45)' 
-                  }}>
-                    At current rate, credits last:
-                  </span>
-                  <span style={{ 
-                    fontSize: m ? '12px' : '13px', 
-                    color: 'rgba(255,255,255,0.92)', 
-                    fontWeight: '600' 
-                  }}>
-                    {burnRate === Infinity ? '∞' : `${Math.round(burnRate)} days`}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ 
-                    fontSize: m ? '12px' : '13px', 
-                    color: 'rgba(255,255,255,0.45)' 
-                  }}>
-                    Daily burn rate:
-                  </span>
-                  <span style={{ 
-                    fontSize: m ? '12px' : '13px', 
-                    color: 'rgba(255,255,255,0.92)', 
-                    fontWeight: '600' 
-                  }}>
-                    ${dailyAvg.toFixed(2)}/day
-                  </span>
-                </div>
-              </div>
-            </div>
-          </GlassCard>
+            </GlassCard>
+          )}
 
           {/* Cost Optimization Tips */}
           <GlassCard delay={0.4} noPad>
@@ -772,6 +937,29 @@ export default function Costs() {
                     Saving ~$15/day vs Opus for tasks
                   </div>
                 </div>
+                {!hasAwsData && (
+                  <div style={{ 
+                    padding: m ? '12px' : '16px', 
+                    background: 'rgba(0,122,255,0.1)', 
+                    borderRadius: '8px',
+                    border: '1px solid rgba(0,122,255,0.2)'
+                  }}>
+                    <div style={{ 
+                      fontSize: m ? '12px' : '14px', 
+                      color: 'rgba(255,255,255,0.92)', 
+                      fontWeight: '500', 
+                      marginBottom: '4px' 
+                    }}>
+                      ☁️ AWS Bedrock: $0
+                    </div>
+                    <div style={{ 
+                      fontSize: m ? '11px' : '12px', 
+                      color: 'rgba(255,255,255,0.65)' 
+                    }}>
+                      Using included AWS credits
+                    </div>
+                  </div>
+                )}
                 <div style={{ 
                   padding: m ? '10px 12px' : '12px 16px', 
                   background: 'rgba(255,255,255,0.05)', 
