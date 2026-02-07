@@ -369,6 +369,18 @@ setTimeout(() => {
   } catch (e) { console.warn('[Startup] Cron pre-warm failed'); }
 }, 100);
 
+// Pre-warm activity + costs caches on startup
+setTimeout(async () => {
+  try {
+    const r = await fetch(`http://127.0.0.1:3333/api/activity`);
+    if (r.ok) console.log('[Startup] Pre-warmed activity cache');
+  } catch {}
+  try {
+    const r = await fetch(`http://127.0.0.1:3333/api/costs`);
+    if (r.ok) console.log('[Startup] Pre-warmed costs cache');
+  } catch {}
+}, 3000);
+
 app.get('/api/status', async (req, res) => {
   try {
     // If cache is stale, refresh in background but serve cached data immediately
@@ -413,7 +425,17 @@ app.get('/api/status', async (req, res) => {
 // ========== API: Live sessions (from OpenClaw gateway) ==========
 let sessionsCache = null;
 let sessionsCacheTime = 0;
-const SESSIONS_CACHE_TTL = 15000;
+const SESSIONS_CACHE_TTL = 60000;
+
+// Activity cache
+let activityCache = null;
+let activityCacheTime = 0;
+const ACTIVITY_CACHE_TTL = 30000;
+
+// Costs cache
+let costsCache = null;
+let costsCacheTime = 0;
+const COSTS_CACHE_TTL = 60000;
 
 app.get('/api/sessions', async (req, res) => {
   try {
@@ -652,6 +674,10 @@ app.delete('/api/cron/:id', async (req, res) => {
 // ========== API: Activity Feed — aggregated activity from all sources ==========
 app.get('/api/activity', async (req, res) => {
   try {
+    // Serve from cache if fresh
+    if (activityCache && Date.now() - activityCacheTime < ACTIVITY_CACHE_TTL) {
+      return res.json(activityCache);
+    }
     const feed = [];
     
     // 1. Completed tasks (with results)
@@ -743,7 +769,10 @@ app.get('/api/activity', async (req, res) => {
       return tb - ta;
     });
     
-    res.json({ feed: feed.slice(0, 30), generated: new Date().toISOString() });
+    const result = { feed: feed.slice(0, 30), generated: new Date().toISOString() };
+    activityCache = result;
+    activityCacheTime = Date.now();
+    res.json(result);
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
@@ -1067,6 +1096,9 @@ Be thorough. Your output will be shown directly to the user as the task result.`
 // ========== API: Costs — Real token usage from sessions ==========
 app.get('/api/costs', async (req, res) => {
   try {
+    if (costsCache && Date.now() - costsCacheTime < COSTS_CACHE_TTL) {
+      return res.json(costsCache);
+    }
     const sessionData = await fetchSessions(50);
     const sessions = sessionData.sessions || [];
 
@@ -1133,7 +1165,7 @@ app.get('/api/costs', async (req, res) => {
       });
     }
 
-    res.json({
+        const costsResult = {
       daily,
       summary: {
         today: 0,
@@ -1149,7 +1181,10 @@ app.get('/api/costs', async (req, res) => {
       byType,
       byChannel,
       budget: mcConfig.budget || { monthly: 0 }
-    });
+    };
+    costsCache = costsResult;
+    costsCacheTime = Date.now();
+    res.json(costsResult);
   } catch (e) {
     console.error('[Costs API]', e.message);
     res.json({
