@@ -5,6 +5,7 @@ import {
   Database, HardDrive, Layers
 } from 'lucide-react'
 import PageTransition from '../components/PageTransition'
+import { useIsMobile } from '../lib/useIsMobile'
 import GlassCard from '../components/GlassCard'
 import AnimatedCounter from '../components/AnimatedCounter'
 
@@ -21,6 +22,7 @@ const typeIcons: Record<string, any> = { md: FileText, csv: FileSpreadsheet, js:
 const typeColors: Record<string, string> = { md: '#007AFF', csv: '#32D74B', js: '#FF9500', default: '#8E8E93' }
 
 export default function Docs() {
+  const isMobile = useIsMobile()
   const [search, setSearch] = useState('')
   const [dragOver, setDragOver] = useState(false)
 
@@ -31,7 +33,7 @@ export default function Docs() {
 
   return (
     <PageTransition>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '16px' : '0', display: 'flex', flexDirection: 'column', gap: isMobile ? 20 : 28 }}>
         {/* Header */}
         <div>
           <h1 className="text-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -41,7 +43,7 @@ export default function Docs() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 16 : 20 }}>
           {[
             { label: 'Documents', value: staticDocs.length, icon: Layers, color: '#007AFF' },
             { label: 'Total Chunks', value: totalChunks, icon: Database, color: '#BF5AF2' },
@@ -100,7 +102,7 @@ export default function Docs() {
         </div>
 
         {/* Document Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
           {filteredDocs.map((doc, i) => {
             const Icon = typeIcons[doc.type] || typeIcons.default
             const color = typeColors[doc.type] || typeColors.default

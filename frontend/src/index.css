@@ -561,3 +561,44 @@ body {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .macos-desktop {
+    padding-left: 0 !important;
+  }
+  
+  .macos-sidebar {
+    position: fixed !important;
+    left: -260px !important;
+    z-index: 100 !important;
+    transition: left 0.3s ease !important;
+    height: 100vh !important;
+  }
+  
+  .macos-sidebar.open {
+    left: 0 !important;
+  }
+  
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 99;
+  }
+  
+  .sidebar-overlay.open {
+    display: block;
+  }
+  
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-menu-btn {
+    display: none !important;
+  }
+}

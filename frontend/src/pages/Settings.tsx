@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Settings2, ChevronDown, Save, RefreshCw, Shield, Database, Cpu, Globe } from 'lucide-react'
 import PageTransition from '../components/PageTransition'
+import { useIsMobile } from '../lib/useIsMobile'
 import GlassCard from '../components/GlassCard'
 import StatusBadge from '../components/StatusBadge'
 import { useApi } from '../lib/hooks'
@@ -17,6 +18,7 @@ interface OpenClawConfig {
 }
 
 export default function Settings() {
+  const isMobile = useIsMobile()
   const { data: configData, refetch } = useApi<OpenClawConfig>('/api/settings')
   const [selectedModel, setSelectedModel] = useState<string>('')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -81,7 +83,7 @@ export default function Settings() {
 
   return (
     <PageTransition>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '16px' : '0', display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 24 }}>
         {/* Header */}
         <div>
           <h1 className="text-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -90,10 +92,10 @@ export default function Settings() {
           <p className="text-body" style={{ marginTop: 4 }}>Configuration & system management</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 16 : 20 }}>
           {/* Model Configuration Card */}
           <GlassCard noPad>
-            <div style={{ padding: 24 }}>
+            <div style={{ padding: isMobile ? 16 : 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0,122,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Cpu size={18} style={{ color: '#007AFF' }} />
@@ -191,7 +193,7 @@ export default function Settings() {
 
           {/* OpenClaw Configuration Card */}
           <GlassCard noPad>
-            <div style={{ padding: 24 }}>
+            <div style={{ padding: isMobile ? 16 : 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(191,90,242,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Shield size={18} style={{ color: '#BF5AF2' }} />
@@ -221,7 +223,7 @@ export default function Settings() {
 
           {/* System Information Card */}
           <GlassCard noPad>
-            <div style={{ padding: 24 }}>
+            <div style={{ padding: isMobile ? 16 : 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,149,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Database size={18} style={{ color: '#FF9500' }} />
@@ -247,7 +249,7 @@ export default function Settings() {
 
           {/* Quick Actions Card */}
           <GlassCard noPad>
-            <div style={{ padding: 24 }}>
+            <div style={{ padding: isMobile ? 16 : 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(50,215,75,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Globe size={18} style={{ color: '#32D74B' }} />

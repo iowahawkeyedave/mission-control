@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Radar, SortDesc, X, Rocket, Shield, Code, Briefcase, GraduationCap, DollarSign } from 'lucide-react'
 import PageTransition from '../components/PageTransition'
+import { useIsMobile } from '../lib/useIsMobile'
 import GlassCard from '../components/GlassCard'
 import { useApi, timeAgo } from '../lib/hooks'
 
@@ -22,6 +23,7 @@ const FILTERS = [
 ]
 
 export default function Scout() {
+  const isMobile = useIsMobile()
   const { data, loading } = useApi<any>('/api/scout', 60000)
   const [sortBy, setSortBy] = useState<'score' | 'date'>('score')
   const [filter, setFilter] = useState('all')
@@ -73,7 +75,7 @@ export default function Scout() {
 
   return (
     <PageTransition>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '16px' : '0', display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 24 }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
@@ -131,7 +133,7 @@ export default function Scout() {
         </div>
 
         {/* Stats Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 16 }}>
           {[
             { label: 'Showing', value: opportunities.length, color: '#fff' },
             { label: 'High Score (85+)', value: opportunities.filter((o: any) => o.score >= 85).length, color: '#32D74B' },
@@ -141,7 +143,7 @@ export default function Scout() {
             <GlassCard key={s.label} delay={0.05 + i * 0.03} noPad>
               <div style={{ padding: '16px 20px' }}>
                 <p className="text-label" style={{ marginBottom: 8 }}>{s.label}</p>
-                <p style={{ fontSize: 22, fontWeight: 300, color: s.color }}>{s.value}</p>
+                <p style={{ fontSize: isMobile ? 18 : 22, fontWeight: 300, color: s.color }}>{s.value}</p>
               </div>
             </GlassCard>
           ))}

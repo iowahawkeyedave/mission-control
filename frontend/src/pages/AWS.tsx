@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Cloud, Play, CheckCircle, AlertCircle, ChevronDown, ChevronUp, X, MessageSquare, Image, Music, Video, Box, Brain, Mic, Languages, Search } from 'lucide-react'
 import PageTransition from '../components/PageTransition'
+import { useIsMobile } from '../lib/useIsMobile'
 import GlassCard from '../components/GlassCard'
 import { useApi } from '../lib/hooks'
 
@@ -64,6 +65,7 @@ function getModelAction(m: BedrockModel): { label: string; type: 'agent' | 'imag
 }
 
 export default function AWS() {
+  const isMobile = useIsMobile()
   const { data: awsData, loading: awsLoading } = useApi<AWSData>('/api/aws/services', 60000)
   const { data: modelsData, loading: modelsLoading } = useApi<BedrockModel[]>('/api/aws/bedrock-models', 120000)
   const { data: costData } = useApi<any>('/api/aws/costs', 60000)
@@ -172,7 +174,7 @@ export default function AWS() {
   return (
     <>
     <PageTransition>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '16px' : '0', display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 24 }}>
         {/* Header */}
         <div>
           <h1 className="text-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -184,7 +186,7 @@ export default function AWS() {
         </div>
 
         {/* Stats Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 16 }}>
           {[
             { label: 'Account ID', value: account.id, color: '#fff' },
             { label: 'Region', value: account.region, color: '#007AFF' },
@@ -201,7 +203,7 @@ export default function AWS() {
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 16 : 20 }}>
           {/* Services */}
           <GlassCard delay={0.15} noPad>
             <div style={{ padding: '20px 24px' }}>
@@ -243,16 +245,16 @@ export default function AWS() {
               <h2 style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.92)', marginBottom: 16 }}>Billing & Credits</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {/* Credits + Spending */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                   <div style={{ padding: 14, borderRadius: 12, background: 'rgba(50,215,75,0.08)', border: '1px solid rgba(50,215,75,0.2)' }}>
                     <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Credits Left</p>
-                    <p style={{ fontSize: 22, fontWeight: 300, color: '#32D74B', fontVariantNumeric: 'tabular-nums' }}>
+                    <p style={{ fontSize: isMobile ? 18 : 22, fontWeight: 300, color: '#32D74B', fontVariantNumeric: 'tabular-nums' }}>
                       ${costData ? costData.remaining?.toLocaleString() : '25,000'}
                     </p>
                   </div>
                   <div style={{ padding: 14, borderRadius: 12, background: 'rgba(255,149,0,0.08)', border: '1px solid rgba(255,149,0,0.2)' }}>
                     <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>This Month</p>
-                    <p style={{ fontSize: 22, fontWeight: 300, color: '#FF9500', fontVariantNumeric: 'tabular-nums' }}>
+                    <p style={{ fontSize: isMobile ? 18 : 22, fontWeight: 300, color: '#FF9500', fontVariantNumeric: 'tabular-nums' }}>
                       ${costData ? costData.total?.toFixed(2) : '0.00'}
                     </p>
                   </div>

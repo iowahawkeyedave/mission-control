@@ -1,6 +1,7 @@
 import { Clock, Play, Pause, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import PageTransition from '../components/PageTransition'
+import { useIsMobile } from '../lib/useIsMobile'
 import GlassCard from '../components/GlassCard'
 import StatusBadge from '../components/StatusBadge'
 import { useApi, timeAgo, formatDate } from '../lib/hooks'
@@ -11,6 +12,7 @@ const statusIcons: Record<string, any> = {
 }
 
 export default function Cron() {
+  const isMobile = useIsMobile()
   const { data, loading } = useApi<any>('/api/cron', 30000)
 
   if (loading || !data) {
@@ -27,7 +29,7 @@ export default function Cron() {
 
   return (
     <PageTransition>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '16px' : '0', display: 'flex', flexDirection: 'column', gap: isMobile ? 20 : 28 }}>
         {/* Header */}
         <div>
           <h1 className="text-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -37,7 +39,7 @@ export default function Cron() {
         </div>
 
         {/* Summary Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
           {[
             { label: 'Active', icon: Play, color: '#32D74B', count: jobs.filter((j: any) => j.status === 'active').length },
             { label: 'Paused', icon: Pause, color: '#FF9500', count: jobs.filter((j: any) => j.status === 'paused').length },

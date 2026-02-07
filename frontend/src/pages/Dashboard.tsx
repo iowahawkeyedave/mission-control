@@ -17,6 +17,7 @@ import GlassCard from '../components/GlassCard'
 import AnimatedCounter from '../components/AnimatedCounter'
 import StatusBadge from '../components/StatusBadge'
 import { useApi, timeAgo } from '../lib/hooks'
+import { useIsMobile } from '../lib/useIsMobile'
 
 const activityIcons: Record<string, any> = {
   heartbeat: Heart,
@@ -29,6 +30,7 @@ const activityIcons: Record<string, any> = {
 }
 
 export default function Dashboard() {
+  const isMobile = useIsMobile()
   const { data, loading } = useApi<any>('/api/status', 30000)
   const [countdown, setCountdown] = useState('')
 
@@ -59,20 +61,20 @@ export default function Dashboard() {
 
   return (
     <PageTransition>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '16px' : '0', display: 'flex', flexDirection: 'column', gap: isMobile ? 20 : 28 }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h1 className="text-title">Dashboard</h1>
-            <p className="text-body" style={{ marginTop: 8 }}>System overview and agent status</p>
+            <h1 className="text-title" style={{ fontSize: isMobile ? 18 : undefined }}>Dashboard</h1>
+            <p className="text-body" style={{ marginTop: 8, fontSize: isMobile ? 12 : undefined }}>System overview and agent status</p>
           </div>
           <StatusBadge status="active" pulse label="Live" />
         </div>
 
         {/* Hero Status Card */}
         <GlassCard delay={0.05} noPad>
-          <div style={{ padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ padding: isMobile ? 16 : 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 16 : 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, width: isMobile ? '100%' : undefined }}>
               <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(0,122,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Activity size={24} style={{ color: '#007AFF' }} />
               </div>
@@ -86,17 +88,17 @@ export default function Dashboard() {
                 </p>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-              <div style={{ textAlign: 'right' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 24 : 32, width: isMobile ? '100%' : undefined, justifyContent: isMobile ? 'space-around' : undefined }}>
+              <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
                 <p className="text-label">Sessions</p>
-                <p style={{ fontSize: 24, fontWeight: 300, color: 'rgba(255,255,255,0.92)', marginTop: 4 }}>
+                <p style={{ fontSize: isMobile ? 20 : 24, fontWeight: 300, color: 'rgba(255,255,255,0.92)', marginTop: 4 }}>
                   <AnimatedCounter end={agent.activeSessions} />
                 </p>
               </div>
               <div style={{ width: 1, height: 40, background: 'rgba(255,255,255,0.08)' }} />
-              <div style={{ textAlign: 'right' }}>
+              <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
                 <p className="text-label">Memory</p>
-                <p style={{ fontSize: 24, fontWeight: 300, color: 'rgba(255,255,255,0.92)', marginTop: 4 }}>
+                <p style={{ fontSize: isMobile ? 20 : 24, fontWeight: 300, color: 'rgba(255,255,255,0.92)', marginTop: 4 }}>
                   <AnimatedCounter end={agent.memoryChunks} />
                   <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', marginLeft: 4 }}>chunks</span>
                 </p>
@@ -106,7 +108,7 @@ export default function Dashboard() {
         </GlassCard>
 
         {/* Stats Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 12 : 20 }}>
           {[
             { label: 'Active Sessions', value: agent.activeSessions, icon: Activity, color: '#007AFF' },
             { label: 'Memory Files', value: agent.memoryFiles, icon: Database, color: '#BF5AF2' },
@@ -114,14 +116,14 @@ export default function Dashboard() {
             { label: 'Channels', value: agent.channels?.length || 0, icon: Radio, color: '#FF9500' },
           ].map((stat, i) => (
             <GlassCard key={stat.label} delay={0.1 + i * 0.05} noPad>
-              <div style={{ padding: 20 }}>
+              <div style={{ padding: isMobile ? 16 : 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: `${stat.color}20` }}>
                     <stat.icon size={16} style={{ color: stat.color }} strokeWidth={2} />
                   </div>
-                  <span className="text-label">{stat.label}</span>
+                  <span className="text-label" style={{ fontSize: isMobile ? 10 : undefined }}>{stat.label}</span>
                 </div>
-                <p style={{ fontSize: 28, fontWeight: 300, color: 'rgba(255,255,255,0.92)' }}>
+                <p style={{ fontSize: isMobile ? 24 : 28, fontWeight: 300, color: 'rgba(255,255,255,0.92)' }}>
                   <AnimatedCounter end={stat.value} />
                 </p>
               </div>
@@ -130,12 +132,12 @@ export default function Dashboard() {
         </div>
 
         {/* Two-column Layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 16 : 24 }}>
           {/* Left Column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20 }}>
             {/* Channels */}
             <GlassCard delay={0.2} hover={false} noPad>
-              <div style={{ padding: 24 }}>
+              <div style={{ padding: isMobile ? 16 : 24 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.92)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Radio size={14} style={{ color: '#BF5AF2' }} /> Channels
                 </h3>
@@ -162,7 +164,7 @@ export default function Dashboard() {
 
             {/* Token Usage */}
             <GlassCard delay={0.25} hover={false} noPad>
-              <div style={{ padding: 24 }}>
+              <div style={{ padding: isMobile ? 16 : 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                   <h3 style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <BarChart3 size={14} style={{ color: '#007AFF' }} /> Token Usage
@@ -181,22 +183,22 @@ export default function Dashboard() {
 
             {/* Heartbeat */}
             <GlassCard delay={0.3} hover={false} noPad>
-              <div style={{ padding: 24 }}>
+              <div style={{ padding: isMobile ? 16 : 24 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.92)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Heart size={14} style={{ color: '#FF453A' }} /> Heartbeat
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, textAlign: 'center' }}>
                   <div>
                     <p className="text-label" style={{ marginBottom: 6 }}>Last</p>
-                    <p className="text-body">{heartbeat.lastHeartbeat ? timeAgo(new Date(heartbeat.lastHeartbeat * 1000).toISOString()) : '—'}</p>
+                    <p className="text-body" style={{ fontSize: isMobile ? 12 : undefined }}>{heartbeat.lastHeartbeat ? timeAgo(new Date(heartbeat.lastHeartbeat * 1000).toISOString()) : '—'}</p>
                   </div>
                   <div>
                     <p className="text-label" style={{ marginBottom: 6 }}>Next</p>
-                    <p className="text-body" style={{ fontFamily: 'monospace', color: '#007AFF' }}>{countdown || '—'}</p>
+                    <p className="text-body" style={{ fontFamily: 'monospace', color: '#007AFF', fontSize: isMobile ? 12 : undefined }}>{countdown || '—'}</p>
                   </div>
                   <div>
                     <p className="text-label" style={{ marginBottom: 6 }}>Interval</p>
-                    <p className="text-body">{agent.heartbeatInterval}</p>
+                    <p className="text-body" style={{ fontSize: isMobile ? 12 : undefined }}>{agent.heartbeatInterval}</p>
                   </div>
                 </div>
               </div>
@@ -205,7 +207,7 @@ export default function Dashboard() {
 
           {/* Right Column - Activity Feed */}
           <GlassCard delay={0.2} hover={false} noPad>
-            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 560 }}>
+            <div style={{ padding: isMobile ? 16 : 24, display: 'flex', flexDirection: 'column', height: '100%', maxHeight: isMobile ? 400 : 560 }}>
               <h3 style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.92)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Zap size={14} style={{ color: '#FFD60A' }} /> Recent Activity
               </h3>
@@ -219,10 +221,10 @@ export default function Dashboard() {
                           <Icon size={13} style={{ color: 'rgba(255,255,255,0.5)' }} strokeWidth={2} />
                         </div>
                         <div style={{ minWidth: 0, flex: 1 }}>
-                          <p className="text-body" style={{ fontWeight: 500 }}>{a.action}</p>
-                          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{a.detail}</p>
+                          <p className="text-body" style={{ fontWeight: 500, fontSize: isMobile ? 12 : undefined }}>{a.action}</p>
+                          <p style={{ fontSize: isMobile ? 10 : 11, color: 'rgba(255,255,255,0.45)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{a.detail}</p>
                         </div>
-                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', flexShrink: 0, whiteSpace: 'nowrap' }}>{timeAgo(a.time)}</span>
+                        <span style={{ fontSize: isMobile ? 10 : 11, color: 'rgba(255,255,255,0.45)', flexShrink: 0, whiteSpace: 'nowrap' }}>{timeAgo(a.time)}</span>
                       </div>
                     )
                   })}

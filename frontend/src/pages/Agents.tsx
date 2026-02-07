@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bot, X, MessageSquare, Activity, BarChart3, Plus } from 'lucide-react'
 import PageTransition from '../components/PageTransition'
+import { useIsMobile } from '../lib/useIsMobile'
 import GlassCard from '../components/GlassCard'
 import StatusBadge from '../components/StatusBadge'
 import AnimatedCounter from '../components/AnimatedCounter'
 import { useApi, timeAgo } from '../lib/hooks'
 
 export default function Agents() {
+  const isMobile = useIsMobile()
   const { data, loading } = useApi<any>('/api/agents', 30000)
   const { data: modelsData } = useApi<any>('/api/models', 0)
   const { data: skillsData } = useApi<any>('/api/skills', 0)
@@ -104,7 +106,7 @@ export default function Agents() {
 
   return (
     <PageTransition>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '16px' : '0', display: 'flex', flexDirection: 'column', gap: isMobile ? 20 : 28 }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
@@ -137,7 +139,7 @@ export default function Agents() {
           </motion.button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: isMobile ? 16 : 24 }}>
           {/* Agent Grid */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
@@ -198,7 +200,7 @@ export default function Agents() {
                   style={{ overflow: 'hidden' }}
                 >
                   <GlassCard hover={false} noPad>
-                    <div style={{ padding: 24 }}>
+                    <div style={{ padding: isMobile ? 16 : 24 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                           <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
@@ -219,7 +221,7 @@ export default function Agents() {
                           <X size={16} style={{ color: 'rgba(255,255,255,0.6)' }} />
                         </motion.button>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 16 }}>
                         {[
                           { label: 'Tokens', value: <><AnimatedCounter end={Math.round((selected.totalTokens || 0) / 1000)} /><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>k</span></> },
                           { label: 'Last Active', value: selected.lastActive ? timeAgo(selected.lastActive) : '—' },
@@ -241,7 +243,7 @@ export default function Agents() {
 
           {/* Chat Feed */}
           <GlassCard delay={0.15} hover={false} noPad>
-            <div style={{ padding: 24 }}>
+            <div style={{ padding: isMobile ? 16 : 24 }}>
               <h3 style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <MessageSquare size={14} style={{ color: '#BF5AF2' }} /> Inter-Agent Chat
               </h3>
@@ -347,7 +349,7 @@ export default function Agents() {
                 {/* Agent Templates */}
                 <div style={{ marginBottom: 32 }}>
                   <h3 style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.65)', marginBottom: 12 }}>Quick Start Templates</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 12 }}>
                     {templates.map((template, i) => (
                       <motion.div
                         key={template.name}
@@ -373,7 +375,7 @@ export default function Agents() {
                 </div>
 
                 {/* Form Fields */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 20 }}>
                   {/* Name */}
                   <div>
                     <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', marginBottom: 8 }}>

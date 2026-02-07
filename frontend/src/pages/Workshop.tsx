@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { Plus, Clock, Zap, CheckCircle } from 'lucide-react'
 import PageTransition from '../components/PageTransition'
 import { useApi, timeAgo } from '../lib/hooks'
+import { useIsMobile } from '../lib/useIsMobile'
 
 const priorityConfig: Record<string, { color: string }> = {
   high: { color: '#FF453A' },
@@ -27,6 +28,7 @@ interface Task {
 }
 
 export default function Workshop() {
+  const isMobile = useIsMobile()
   const { data, loading } = useApi<any>('/api/tasks', 60000)
 
   if (loading || !data) {
@@ -43,37 +45,67 @@ export default function Workshop() {
 
   return (
     <PageTransition>
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '16px' : '0' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: isMobile ? 'flex-start' : 'center', 
+          justifyContent: 'space-between', 
+          marginBottom: isMobile ? 24 : 32,
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? 16 : 0
+        }}>
           <div>
-            <h1 className="text-title">Workshop</h1>
-            <p className="text-body" style={{ marginTop: 8 }}>Task management & project tracking</p>
+            <h1 className="text-title" style={{ fontSize: isMobile ? 18 : undefined }}>Workshop</h1>
+            <p className="text-body" style={{ marginTop: 8, fontSize: isMobile ? 12 : undefined }}>Task management & project tracking</p>
           </div>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="macos-button-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontSize: 14 }}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 8, 
+              padding: isMobile ? '8px 16px' : '10px 20px', 
+              fontSize: isMobile ? 13 : 14,
+              alignSelf: isMobile ? 'stretch' : undefined,
+              justifyContent: isMobile ? 'center' : undefined
+            }}
           >
             <Plus size={14} /> Add Task
           </motion.button>
         </div>
 
         {/* Kanban Board */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
+        <div style={{ 
+          display: isMobile ? 'flex' : 'grid', 
+          gridTemplateColumns: isMobile ? undefined : 'repeat(3, 1fr)', 
+          gap: isMobile ? 16 : 32,
+          overflowX: isMobile ? 'auto' : undefined,
+          paddingBottom: isMobile ? 16 : undefined
+        }}>
           {(['queue', 'inProgress', 'done'] as const).map((col, ci) => {
             const tasks: Task[] = columns[col] || []
             const config = columnConfig[col]
             const Icon = config.icon
             return (
-              <div key={col} style={{ minWidth: 0 }}>
+              <div key={col} style={{ 
+                minWidth: isMobile ? 280 : 0,
+                flexShrink: isMobile ? 0 : undefined
+              }}>
                 {/* Column Header */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: ci * 0.1 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, paddingLeft: 4 }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 10, 
+                    marginBottom: isMobile ? 16 : 20, 
+                    paddingLeft: 4 
+                  }}
                 >
                   <Icon size={16} style={{ color: config.color }} />
                   <h3 style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>{config.title}</h3>
@@ -81,7 +113,7 @@ export default function Workshop() {
                 </motion.div>
 
                 {/* Cards */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16 }}>
                   {tasks.map((task, i) => (
                     <motion.div
                       key={task.id}
@@ -90,28 +122,54 @@ export default function Workshop() {
                       transition={{ delay: 0.1 + ci * 0.1 + i * 0.05 }}
                       whileHover={{ y: -3, scale: 1.01 }}
                       className="macos-panel"
-                      style={{ padding: 20, cursor: 'pointer', overflow: 'hidden' }}
+                      style={{ 
+                        padding: isMobile ? 16 : 20, 
+                        cursor: 'pointer', 
+                        overflow: 'hidden' 
+                      }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: priorityConfig[task.priority]?.color || '#8E8E93', flexShrink: 0 }} />
-                        <h4 className="text-body" style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</h4>
+                        <h4 className="text-body" style={{ 
+                          fontWeight: 600, 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis', 
+                          whiteSpace: 'nowrap',
+                          fontSize: isMobile ? 12 : undefined
+                        }}>
+                          {task.title}
+                        </h4>
                       </div>
-                      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 16, lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      <p style={{ 
+                        fontSize: isMobile ? 11 : 12, 
+                        color: 'rgba(255,255,255,0.45)', 
+                        marginBottom: isMobile ? 12 : 16, 
+                        lineHeight: 1.6, 
+                        display: '-webkit-box', 
+                        WebkitLineClamp: 2, 
+                        WebkitBoxOrient: 'vertical', 
+                        overflow: 'hidden' 
+                      }}>
                         {task.description}
                       </p>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minWidth: 0, flex: 1, overflow: 'hidden' }}>
                           {task.tags.map(tag => (
-                            <span key={tag} className="macos-badge" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{tag}</span>
+                            <span key={tag} className="macos-badge" style={{ fontSize: isMobile ? 9 : 10, whiteSpace: 'nowrap' }}>{tag}</span>
                           ))}
                         </div>
-                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        <span style={{ 
+                          fontSize: isMobile ? 10 : 11, 
+                          color: 'rgba(255,255,255,0.45)', 
+                          whiteSpace: 'nowrap', 
+                          flexShrink: 0 
+                        }}>
                           {task.completed ? timeAgo(task.completed) : task.created ? timeAgo(task.created) : ''}
                         </span>
                       </div>
                       {task.assignee && (
-                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+                        <div style={{ marginTop: isMobile ? 10 : 12, paddingTop: isMobile ? 10 : 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                          <span style={{ fontSize: isMobile ? 10 : 11, color: 'rgba(255,255,255,0.45)' }}>
                             Assigned to <span style={{ color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>{task.assignee}</span>
                           </span>
                         </div>

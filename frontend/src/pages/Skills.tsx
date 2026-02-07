@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Puzzle, Download, Trash2, ToggleLeft, ToggleRight, Package, FolderOpen, Code } from 'lucide-react'
 import PageTransition from '../components/PageTransition'
+import { useIsMobile } from '../lib/useIsMobile'
 import GlassCard from '../components/GlassCard'
 import StatusBadge from '../components/StatusBadge'
 import { useApi } from '../lib/hooks'
@@ -18,6 +19,7 @@ interface Skill {
 }
 
 export default function Skills() {
+  const isMobile = useIsMobile()
   const { data: skillsData, loading, refetch } = useApi<{ installed: Skill[], available: Skill[] }>('/api/skills')
   const [filter, setFilter] = useState<'all' | 'installed' | 'available'>('all')
   const [toggling, setToggling] = useState<string | null>(null)
@@ -78,7 +80,7 @@ export default function Skills() {
 
   return (
     <PageTransition>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '16px' : '0', display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 24 }}>
         {/* Header */}
         <div>
           <h1 className="text-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -88,7 +90,7 @@ export default function Skills() {
         </div>
 
         {/* Stats Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 16 }}>
           {[
             { label: 'Installed', value: skillsData?.installed?.length || 0, color: '#007AFF' },
             { label: 'Active', value: skillsData?.installed?.filter(s => s.status === 'active').length || 0, color: '#32D74B' },
@@ -127,13 +129,13 @@ export default function Skills() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
           {loading ? (
             <GlassCard noPad>
-              <div style={{ padding: 24, textAlign: 'center', color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>
+              <div style={{ padding: isMobile ? 16 : 24, textAlign: 'center', color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>
                 Loading skills...
               </div>
             </GlassCard>
           ) : filteredSkills.length === 0 ? (
             <GlassCard noPad>
-              <div style={{ padding: 24, textAlign: 'center', color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>
+              <div style={{ padding: isMobile ? 16 : 24, textAlign: 'center', color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>
                 No skills found
               </div>
             </GlassCard>
@@ -147,7 +149,7 @@ export default function Skills() {
                 transition={{ duration: 0.2 }}
               >
                 <GlassCard noPad>
-                  <div style={{ padding: 24 }}>
+                  <div style={{ padding: isMobile ? 16 : 24 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flex: 1 }}>
                         <div style={{ marginTop: 2 }}>{getTypeIcon(skill.type)}</div>

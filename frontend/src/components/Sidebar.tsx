@@ -35,7 +35,12 @@ const allNavItems = [
   { to: '/aws', icon: Cloud, label: 'AWS', module: 'aws' },
 ]
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean
+  onClose?: () => void
+}
+
+export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const [config, setConfig] = useState<McConfig | null>(null)
 
   useEffect(() => {
@@ -54,7 +59,10 @@ export default function Sidebar() {
   const subtitle = config?.subtitle || 'Mission Control'
 
   return (
-    <aside style={{ width: 256, height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }} className="macos-sidebar">
+    <aside 
+      style={{ width: 256, height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }} 
+      className={`macos-sidebar ${isOpen ? 'open' : ''}`}
+    >
       {/* Logo Section */}
       <div style={{ padding: '16px 16px 12px', position: 'relative', zIndex: 2 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -83,6 +91,7 @@ export default function Sidebar() {
                 `macos-list-item ${isActive ? 'active' : ''}`
               }
               style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+              onClick={onClose} // Close sidebar on mobile when nav item is clicked
             >
               <item.icon size={16} strokeWidth={2} />
               <span>{item.label}</span>
