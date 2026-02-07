@@ -223,6 +223,24 @@ export default function Workshop() {
               </button>
             )}
           </div>
+
+          {/* Delete button */}
+          <button
+            onClick={async () => {
+              if (!confirm(`Delete "${viewTask.title}"?`)) return
+              await fetch(`/api/tasks/${viewTask.id}`, { method: 'DELETE' })
+              setViewTask(null)
+              refetch()
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(255,69,58,0.3)',
+              background: 'rgba(255,69,58,0.1)', color: '#FF453A', fontSize: 12, cursor: 'pointer',
+              marginTop: 8, width: m ? '100%' : 'auto', alignSelf: 'flex-start',
+            }}
+          >
+            🗑 Delete Task
+          </button>
         </div>
       </PageTransition>
     )

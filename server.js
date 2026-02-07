@@ -837,6 +837,30 @@ app.post('/api/tasks/add', (req, res) => {
   }
 });
 
+// DELETE: Remove a task from any column
+app.delete('/api/tasks/:taskId', (req, res) => {
+  try {
+    const tasks = JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8'));
+    const { taskId } = req.params;
+    let found = false;
+    for (const col of Object.keys(tasks.columns)) {
+      const idx = tasks.columns[col].findIndex(t => t.id === taskId);
+      if (idx !== -1) {
+        tasks.columns[col].splice(idx, 1);
+        found = true;
+        break;
+      }
+    }
+    if (!found) return res.status(404).json({ error: 'Task not found' });
+    fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2));
+    // Clear activity cache
+    activityCache = null; activityCacheTime = 0;
+    res.json({ ok: true, deleted: taskId });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST: Execute a task — spawns sub-agent
 app.post('/api/tasks/:taskId/execute', async (req, res) => {
   try {
