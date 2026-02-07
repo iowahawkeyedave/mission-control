@@ -55,5 +55,8 @@
   },
   "workspace": "",
   "skillsPath": "",
-  "memoryPath": ""
+  "memoryPath": "",
+  "budget": {
+    "monthly": 250
+  }
 }

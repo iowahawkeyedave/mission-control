@@ -179,52 +179,139 @@ export default function Agents() {
         <div>
           {/* Agent Grid */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: m ? 12 : 16 }}>
-              {agents.map((agent: any, i: number) => (
-                <motion.div
-                  key={agent.id}
-                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: i * 0.06 }}
-                  whileHover={{ y: -3, scale: 1.01 }}
-                  onClick={() => setSelectedAgent(selectedAgent === agent.id ? null : agent.id)}
-                  className="macos-panel"
-                  style={{
-                    borderRadius: m ? 12 : 16, padding: m ? 14 : 20, cursor: 'pointer',
-                    borderColor: selectedAgent === agent.id ? 'rgba(191,90,242,0.4)' : undefined,
-                    background: selectedAgent === agent.id ? 'rgba(191,90,242,0.08)' : undefined,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                      {agent.avatar}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <h3 style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.92)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agent.name}</h3>
-                        <StatusBadge status={agent.status} pulse={agent.status === 'active'} />
+            
+            {/* Real OpenClaw Agents Section */}
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.92)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Activity size={18} style={{ color: '#007AFF' }} />
+                Active Sessions
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: m ? 12 : 16 }}>
+                {Object.entries(sessionGroups).map(([key, group]: [string, any], i) => (
+                  <motion.div
+                    key={key}
+                    initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: i * 0.06 }}
+                    whileHover={{ y: -2, scale: 1.01 }}
+                    className="macos-panel"
+                    style={{
+                      borderRadius: m ? 12 : 16, 
+                      padding: m ? 14 : 20,
+                      opacity: group.sessions.length === 0 ? 0.4 : 1,
+                      cursor: 'default'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+                      <div style={{ 
+                        width: 48, 
+                        height: 48, 
+                        borderRadius: 14, 
+                        background: 'rgba(255,255,255,0.06)', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        fontSize: 20, 
+                        flexShrink: 0 
+                      }}>
+                        {group.icon}
                       </div>
-                      <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>{agent.role}</p>
-                      <p style={{ fontSize: 10, color: '#BF5AF2', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {agent.model?.replace('us.anthropic.', '').replace(/claude-opus-(\d+).*/, 'Claude Opus $1').replace(/claude-sonnet-(\d+).*/, 'Claude Sonnet $1').replace(/claude-haiku-(\d+).*/, 'Claude Haiku $1').replace(/-/g, ' ') || 'Unknown Model'}
-                      </p>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <h3 style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.92)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {group.name}
+                          </h3>
+                          <StatusBadge 
+                            status={group.sessions.some((s: any) => s.isActive) ? 'active' : 'idle'} 
+                            pulse={group.sessions.some((s: any) => s.isActive)} 
+                          />
+                        </div>
+                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
+                          {group.sessions.length} session{group.sessions.length !== 1 ? 's' : ''}
+                        </p>
+                        <p style={{ fontSize: 10, color: '#BF5AF2', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {((group.totalTokens || 0) / 1000).toFixed(0)}k tokens
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 16, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{agent.description}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <BarChart3 size={11} style={{ color: 'rgba(255,255,255,0.4)' }} /> {((agent.totalTokens || 0) / 1000).toFixed(0)}k tokens
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Activity size={11} style={{ color: 'rgba(255,255,255,0.4)' }} /> {agent.lastActive ? timeAgo(agent.lastActive) : 'n/a'}
-                    </span>
-                    <span style={{ marginLeft: 'auto' }}>
-                      {agent.role}
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
+                    
+                    <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 16, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>
+                      {group.sessions.length === 0 ? 'No active sessions' : 
+                       group.sessions.length === 1 ? `Active session: ${group.sessions[0].displayName}` :
+                       `${group.sessions.length} active sessions`}
+                    </p>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <BarChart3 size={11} style={{ color: 'rgba(255,255,255,0.4)' }} /> 
+                        {((group.totalTokens || 0) / 1000).toFixed(0)}k tokens
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <MessageSquare size={11} style={{ color: 'rgba(255,255,255,0.4)' }} /> 
+                        {group.sessions.length} sessions
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
+
+            {/* Custom Agents Section */}
+            {agents.length > 0 && (
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.92)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Bot size={18} style={{ color: '#BF5AF2' }} />
+                  Custom Agents
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: m ? 12 : 16 }}>
+                  {agents.map((agent: any, i: number) => (
+                    <motion.div
+                      key={agent.id}
+                      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ delay: 0.3 + i * 0.06 }}
+                      whileHover={{ y: -3, scale: 1.01 }}
+                      onClick={() => setSelectedAgent(selectedAgent === agent.id ? null : agent.id)}
+                      className="macos-panel"
+                      style={{
+                        borderRadius: m ? 12 : 16, padding: m ? 14 : 20, cursor: 'pointer',
+                        borderColor: selectedAgent === agent.id ? 'rgba(191,90,242,0.4)' : undefined,
+                        background: selectedAgent === agent.id ? 'rgba(191,90,242,0.08)' : undefined,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                          {agent.avatar}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <h3 style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.92)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agent.name}</h3>
+                            <StatusBadge status={agent.status} pulse={agent.status === 'active'} />
+                          </div>
+                          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>{agent.role}</p>
+                          <p style={{ fontSize: 10, color: '#BF5AF2', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {agent.model?.replace('us.anthropic.', '').replace(/claude-opus-(\d+).*/, 'Claude Opus $1').replace(/claude-sonnet-(\d+).*/, 'Claude Sonnet $1').replace(/claude-haiku-(\d+).*/, 'Claude Haiku $1').replace(/-/g, ' ') || 'Unknown Model'}
+                          </p>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 16, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{agent.description}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <BarChart3 size={11} style={{ color: 'rgba(255,255,255,0.4)' }} /> {((agent.totalTokens || 0) / 1000).toFixed(0)}k tokens
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Activity size={11} style={{ color: 'rgba(255,255,255,0.4)' }} /> {agent.lastActive ? timeAgo(agent.lastActive) : 'n/a'}
+                        </span>
+                        <span style={{ marginLeft: 'auto' }}>
+                          {agent.role}
+                        </span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Detail Panel */}
             <AnimatePresence>

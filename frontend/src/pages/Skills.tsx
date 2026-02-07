@@ -27,7 +27,14 @@ export default function Skills() {
   const handleToggleSkill = async (skillName: string) => {
     setToggling(skillName)
     try {
-      const response = await fetch(`/api/skills/${skillName}/toggle`, { method: 'POST' })
+      const skill = [...(skillsData?.installed || []), ...(skillsData?.available || [])].find(s => s.name === skillName)
+      const newEnabled = skill?.status !== 'active'
+      
+      const response = await fetch(`/api/skills/${skillName}/toggle`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: newEnabled })
+      })
       if (response.ok) refetch()
     } catch (error) {
       console.error('Failed to toggle skill:', error)
@@ -174,23 +181,24 @@ export default function Skills() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {skill.installed ? (
                         <>
+                          {/* Enable/Disable Toggle */}
                           <button
                             onClick={() => handleToggleSkill(skill.name)}
                             disabled={toggling === skill.name}
                             style={{
                               display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8,
-                              border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)',
-                              color: 'rgba(255,255,255,0.65)', fontSize: 11, cursor: 'pointer',
+                              border: '1px solid rgba(255,255,255,0.08)', 
+                              background: skill.status === 'active' ? 'rgba(52,215,75,0.15)' : 'rgba(255,255,255,0.04)',
+                              color: skill.status === 'active' ? '#32D74B' : 'rgba(255,255,255,0.65)', 
+                              fontSize: 11, cursor: 'pointer',
                               opacity: toggling === skill.name ? 0.5 : 1,
-                              transition: 'background 0.15s',
+                              transition: 'all 0.2s',
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
                           >
                             {skill.status === 'active' ? (
-                              <><ToggleRight size={16} style={{ color: '#32D74B' }} /><span>Disable</span></>
+                              <><ToggleRight size={16} style={{ color: '#32D74B' }} /><span>Enabled</span></>
                             ) : (
-                              <><ToggleLeft size={16} style={{ color: '#8E8E93' }} /><span>Enable</span></>
+                              <><ToggleLeft size={16} style={{ color: '#8E8E93' }} /><span>Disabled</span></>
                             )}
                           </button>
                           <button

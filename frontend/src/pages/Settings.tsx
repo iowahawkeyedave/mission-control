@@ -260,3 +260,364 @@ export default function Settings() {
     </PageTransition>
   )
 }
+
+function ModelRoutingCard({ isMobile }: { isMobile: boolean }) {
+  const [routing, setRouting] = useState({ main: '', subagent: '', heartbeat: '' })
+  const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaveStatus('idle')
+    
+    try {
+      const res = await fetch('/api/settings/model-routing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(routing)
+      })
+      
+      if (res.ok) {
+        setSaveStatus('success')
+        setTimeout(() => setSaveStatus('idle'), 3000)
+      } else {
+        setSaveStatus('error')
+        setTimeout(() => setSaveStatus('idle'), 3000)
+      }
+    } catch (e) {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus('idle'), 3000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <GlassCard noPad>
+      <div style={{ padding: isMobile ? 16 : 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,149,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Zap size={18} style={{ color: '#FF9500' }} />
+          </div>
+          <h2 style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>Model Routing</h2>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label className="text-label" style={{ display: 'block', marginBottom: 8 }}>Main Model</label>
+            <input
+              type="text"
+              value={routing.main}
+              onChange={(e) => setRouting({ ...routing, main: e.target.value })}
+              placeholder="us.anthropic.claude-opus-4-6-v1"
+              style={{ 
+                width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', 
+                background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.92)', fontSize: 13 
+              }}
+            />
+          </div>
+          
+          <div>
+            <label className="text-label" style={{ display: 'block', marginBottom: 8 }}>Sub-agent Model</label>
+            <input
+              type="text"
+              value={routing.subagent}
+              onChange={(e) => setRouting({ ...routing, subagent: e.target.value })}
+              placeholder="us.anthropic.claude-sonnet-4-20250514-v1:0"
+              style={{ 
+                width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', 
+                background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.92)', fontSize: 13 
+              }}
+            />
+          </div>
+          
+          <div>
+            <label className="text-label" style={{ display: 'block', marginBottom: 8 }}>Heartbeat Model</label>
+            <input
+              type="text"
+              value={routing.heartbeat}
+              onChange={(e) => setRouting({ ...routing, heartbeat: e.target.value })}
+              placeholder="us.anthropic.claude-haiku-4-5-20251001-v1:0"
+              style={{ 
+                width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', 
+                background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.92)', fontSize: 13 
+              }}
+            />
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '12px 16px', borderRadius: 10, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+              background: saving ? 'rgba(255,149,0,0.3)' : '#FF9500',
+              color: '#fff', fontSize: 13, fontWeight: 500,
+              opacity: saving ? 0.5 : 1,
+              transition: 'all 0.2s',
+            }}
+          >
+            {saving ? (
+              <>
+                <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                <span>Save Model Routing</span>
+              </>
+            )}
+          </button>
+
+          {saveStatus === 'success' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#32D74B', fontSize: 12 }}>
+              <span className="status-dot status-dot-green" />
+              Model routing saved successfully
+            </div>
+          )}
+          {saveStatus === 'error' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#FF453A', fontSize: 12 }}>
+              <span className="status-dot status-dot-red" />
+              Failed to save model routing
+            </div>
+          )}
+        </div>
+      </div>
+    </GlassCard>
+  )
+}
+
+function HeartbeatConfigCard({ isMobile }: { isMobile: boolean }) {
+  const [interval, setInterval] = useState('1h')
+  const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
+
+  const intervalOptions = [
+    { value: '30min', label: '30 minutes' },
+    { value: '1h', label: '1 hour' },
+    { value: '2h', label: '2 hours' },
+    { value: '4h', label: '4 hours' },
+    { value: 'off', label: 'Off' },
+  ]
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaveStatus('idle')
+    
+    try {
+      const res = await fetch('/api/settings/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interval })
+      })
+      
+      if (res.ok) {
+        setSaveStatus('success')
+        setTimeout(() => setSaveStatus('idle'), 3000)
+      } else {
+        setSaveStatus('error')
+        setTimeout(() => setSaveStatus('idle'), 3000)
+      }
+    } catch (e) {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus('idle'), 3000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <GlassCard noPad>
+      <div style={{ padding: isMobile ? 16 : 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,69,58,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Clock size={18} style={{ color: '#FF453A' }} />
+          </div>
+          <h2 style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>Heartbeat Interval</h2>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label className="text-label" style={{ display: 'block', marginBottom: 8 }}>Check Interval</label>
+            <select
+              value={interval}
+              onChange={(e) => setInterval(e.target.value)}
+              style={{ 
+                width: '100%', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', 
+                background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.92)', fontSize: 13,
+                cursor: 'pointer'
+              }}
+            >
+              {intervalOptions.map(opt => (
+                <option key={opt.value} value={opt.value} style={{ background: '#1a1a1a', color: '#fff' }}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '12px 16px', borderRadius: 10, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+              background: saving ? 'rgba(255,69,58,0.3)' : '#FF453A',
+              color: '#fff', fontSize: 13, fontWeight: 500,
+              opacity: saving ? 0.5 : 1,
+              transition: 'all 0.2s',
+            }}
+          >
+            {saving ? (
+              <>
+                <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                <span>Save Heartbeat Interval</span>
+              </>
+            )}
+          </button>
+
+          {saveStatus === 'success' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#32D74B', fontSize: 12 }}>
+              <span className="status-dot status-dot-green" />
+              Heartbeat interval saved successfully
+            </div>
+          )}
+          {saveStatus === 'error' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#FF453A', fontSize: 12 }}>
+              <span className="status-dot status-dot-red" />
+              Failed to save heartbeat interval
+            </div>
+          )}
+        </div>
+      </div>
+    </GlassCard>
+  )
+}
+
+function ExportImportCard({ isMobile }: { isMobile: boolean }) {
+  const [importing, setImporting] = useState(false)
+  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle')
+
+  const handleExport = () => {
+    // Trigger download
+    window.location.href = '/api/settings/export'
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setImporting(true)
+    setImportStatus('idle')
+    
+    try {
+      const formData = new FormData()
+      formData.append('config', file)
+      
+      const res = await fetch('/api/settings/import', {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (res.ok) {
+        setImportStatus('success')
+        setTimeout(() => setImportStatus('idle'), 3000)
+      } else {
+        setImportStatus('error')
+        setTimeout(() => setImportStatus('idle'), 3000)
+      }
+    } catch (e) {
+      setImportStatus('error')
+      setTimeout(() => setImportStatus('idle'), 3000)
+    } finally {
+      setImporting(false)
+      // Clear file input
+      e.target.value = ''
+    }
+  }
+
+  return (
+    <GlassCard noPad>
+      <div style={{ padding: isMobile ? 16 : 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(50,215,75,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Globe size={18} style={{ color: '#32D74B' }} />
+          </div>
+          <h2 style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>Export / Import</h2>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <button
+            onClick={handleExport}
+            style={{
+              width: '100%', padding: '12px 16px', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              border: '1px solid rgba(50,215,75,0.3)', background: 'rgba(50,215,75,0.1)',
+              color: '#32D74B', fontSize: 13, cursor: 'pointer', fontWeight: 500,
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(50,215,75,0.2)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(50,215,75,0.1)' }}
+          >
+            <Download size={16} />
+            Export Configuration
+          </button>
+
+          <div style={{ position: 'relative' }}>
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImport}
+              disabled={importing}
+              style={{
+                position: 'absolute', width: '100%', height: '100%', opacity: 0, cursor: importing ? 'not-allowed' : 'pointer'
+              }}
+            />
+            <button
+              disabled={importing}
+              style={{
+                width: '100%', padding: '12px 16px', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                border: '1px solid rgba(0,122,255,0.3)', background: 'rgba(0,122,255,0.1)',
+                color: '#007AFF', fontSize: 13, cursor: importing ? 'not-allowed' : 'pointer', fontWeight: 500,
+                opacity: importing ? 0.5 : 1,
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={(e) => { if (!importing) e.currentTarget.style.background = 'rgba(0,122,255,0.2)' }}
+              onMouseLeave={(e) => { if (!importing) e.currentTarget.style.background = 'rgba(0,122,255,0.1)' }}
+            >
+              {importing ? (
+                <>
+                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                  <span>Importing...</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={16} />
+                  <span>Import Configuration</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {importStatus === 'success' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#32D74B', fontSize: 12 }}>
+              <span className="status-dot status-dot-green" />
+              Configuration imported successfully. Restart required.
+            </div>
+          )}
+          {importStatus === 'error' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#FF453A', fontSize: 12 }}>
+              <span className="status-dot status-dot-red" />
+              Failed to import configuration
+            </div>
+          )}
+        </div>
+      </div>
+    </GlassCard>
+  )
+}
