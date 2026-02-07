@@ -1,4 +1,9 @@
 node_modules/
 frontend/node_modules/
 frontend/dist/
-*.png
+mc-config.json
+*.log
+.DS_Store
+documents/
+scout-results.json
+tasks.json
