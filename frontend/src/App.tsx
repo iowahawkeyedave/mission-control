@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, useMatch } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
@@ -21,6 +21,9 @@ export default function App() {
   const location = useLocation()
   const isMobile = useIsMobile()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Hide global chat widget on pages that have their own chat
+  const hideChatWidget = isMobile && (location.pathname === '/workshop' || location.pathname === '/conversations')
 
   const closeSidebar = () => setSidebarOpen(false)
 
@@ -96,8 +99,8 @@ export default function App() {
         </div>
       </main>
 
-      {/* Global chat widget — available on all pages */}
-      <ChatWidget />
+      {/* Global chat widget — hidden on pages with built-in chat (mobile) */}
+      {!hideChatWidget && <ChatWidget />}
     </div>
   )
 }

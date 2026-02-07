@@ -620,78 +620,83 @@ Be thorough. Your output will be shown directly to the user as the task result.`
             body: JSON.stringify({ tool: 'sessions_list', args: { limit: 100, messageLimit: 1 } })
           });
           const listData = await listRes.json();
-          const sessions = JSON.parse(listData?.result?.content?.[0]?.text || '[]');
+          const listParsed = JSON.parse(listData?.result?.content?.[0]?.text || '{}');
+          const sessions = listParsed.sessions || listParsed || [];
           const child = sessions.find(s => s.key === childKey);
           
-          if (!child || child.status === 'ended' || child.status === 'completed' || child.idle > 120) {
-            clearInterval(pollInterval);
+          // Check if session is done (not found = ended, or aborted, or idle)
+          const isEnded = !child || child.abortedLastRun || (child.idle && child.idle > 60);
+          if (!isEnded) return; // Still running, wait for next poll
+          
+          clearInterval(pollInterval);
             
-            // Get last message from the child session
-            let resultText = '';
+          // Get last message from the child session
+          let resultText = '';
+          try {
+            const histRes = await fetch(`http://127.0.0.1:${gwPort}/tools/invoke`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gwToken}` },
+              body: JSON.stringify({ tool: 'sessions_history', args: { sessionKey: childKey, limit: 5 } })
+            });
+            const histData = await histRes.json();
+            const histText = histData?.result?.content?.[0]?.text || '';
+            // Parse messages and get last assistant message
             try {
-              const histRes = await fetch(`http://127.0.0.1:${gwPort}/tools/invoke`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gwToken}` },
-                body: JSON.stringify({ tool: 'sessions_history', args: { sessionKey: childKey, limit: 5 } })
-              });
-              const histData = await histRes.json();
-              const histText = histData?.result?.content?.[0]?.text || '';
-              // Parse messages and get last assistant message
-              try {
-                const msgs = JSON.parse(histText);
-                const assistantMsgs = (Array.isArray(msgs) ? msgs : []).filter(m => m.role === 'assistant');
-                if (assistantMsgs.length > 0) {
-                  const last = assistantMsgs[assistantMsgs.length - 1];
-                  resultText = typeof last.content === 'string' ? last.content : last.content?.[0]?.text || '';
-                }
-              } catch(e) {
-                // Maybe it's raw text
-                resultText = histText.substring(0, 2000);
+              const msgs = JSON.parse(histText);
+              const assistantMsgs = (Array.isArray(msgs) ? msgs : []).filter(m => m.role === 'assistant');
+              if (assistantMsgs.length > 0) {
+                const last = assistantMsgs[assistantMsgs.length - 1];
+                resultText = typeof last.content === 'string' ? last.content : last.content?.[0]?.text || '';
               }
             } catch(e) {
-              console.error('[Task Poll] History fetch failed:', e.message);
+              // Maybe it's raw text
+              resultText = histText.substring(0, 2000);
             }
-            
-            // If sessions_history didn't work, try reading transcript file directly
-            if (!resultText) {
-              try {
-                const uuid = childKey.split(':').pop();
-                const transcriptDir = path.join(require('os').homedir(), '.openclaw/agents/main/sessions');
-                const files = fs.readdirSync(transcriptDir).filter(f => f.includes(uuid));
-                if (files.length > 0) {
-                  const lines = fs.readFileSync(path.join(transcriptDir, files[0]), 'utf8').trim().split('\n');
-                  // Find last assistant message
-                  for (let i = lines.length - 1; i >= 0; i--) {
-                    try {
-                      const evt = JSON.parse(lines[i]);
-                      if (evt.type === 'message' && evt.message?.role === 'assistant') {
-                        const content = evt.message.content;
-                        resultText = Array.isArray(content) 
-                          ? content.filter(c => c.type === 'text').map(c => c.text).join('\n')
-                          : typeof content === 'string' ? content : '';
-                        if (resultText) break;
-                      }
-                    } catch(e) {}
-                  }
+          } catch(e) {
+            console.error('[Task Poll] History fetch failed:', e.message);
+          }
+          
+          // If sessions_history didn't work, try reading transcript file directly
+          if (!resultText) {
+            try {
+              const uuid = childKey.split(':').pop();
+              const sessionsJson = JSON.parse(fs.readFileSync(path.join(require('os').homedir(), '.openclaw/agents/main/sessions/sessions.json'), 'utf8'));
+              const sessionInfo = sessionsJson[childKey];
+              const sessionId = sessionInfo?.sessionId || uuid;
+              const transcriptPath = path.join(require('os').homedir(), '.openclaw/agents/main/sessions', `${sessionId}.jsonl`);
+              if (fs.existsSync(transcriptPath)) {
+                const lines = fs.readFileSync(transcriptPath, 'utf8').trim().split('\n');
+                // Find last assistant message
+                for (let i = lines.length - 1; i >= 0; i--) {
+                  try {
+                    const evt = JSON.parse(lines[i]);
+                    if (evt.type === 'message' && evt.message?.role === 'assistant') {
+                      const content = evt.message.content;
+                      resultText = Array.isArray(content) 
+                        ? content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+                        : typeof content === 'string' ? content : '';
+                      if (resultText) break;
+                    }
+                  } catch(e) {}
                 }
-              } catch(e) {
-                console.error('[Task Poll] Transcript read failed:', e.message);
               }
+            } catch(e) {
+              console.error('[Task Poll] Transcript read failed:', e.message);
             }
-            
-            // Move task to done
-            const tasksNow = JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8'));
-            const idx = tasksNow.columns.inProgress.findIndex(t => t.id === taskId);
-            if (idx >= 0) {
-              const doneTask = tasksNow.columns.inProgress.splice(idx, 1)[0];
-              doneTask.status = 'done';
-              doneTask.completed = new Date().toISOString();
-              doneTask.result = resultText.substring(0, 3000) || 'Task completed (no output captured)';
-              delete doneTask.childSessionKey;
-              tasksNow.columns.done.unshift(doneTask);
-              fs.writeFileSync(TASKS_FILE, JSON.stringify(tasksNow, null, 2));
-              console.log(`[Task Execute] ✅ ${taskId} done, result: ${resultText.substring(0, 80)}...`);
-            }
+          }
+          
+          // Move task to done
+          const tasksNow = JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8'));
+          const idx = tasksNow.columns.inProgress.findIndex(t => t.id === taskId);
+          if (idx >= 0) {
+            const doneTask = tasksNow.columns.inProgress.splice(idx, 1)[0];
+            doneTask.status = 'done';
+            doneTask.completed = new Date().toISOString();
+            doneTask.result = resultText.substring(0, 3000) || 'Task completed (no output captured)';
+            delete doneTask.childSessionKey;
+            tasksNow.columns.done.unshift(doneTask);
+            fs.writeFileSync(TASKS_FILE, JSON.stringify(tasksNow, null, 2));
+            console.log(`[Task Execute] ✅ ${taskId} done, result: ${resultText.substring(0, 80)}...`);
           }
         } catch(e) {
           console.error('[Task Poll] Error:', e.message);
