@@ -472,6 +472,9 @@ app.get('/api/sessions', async (req, res) => {
         };
       }),
     };
+    // Filter out hidden/closed sessions
+    result.sessions = result.sessions.filter(s => !hiddenSessions.includes(s.key));
+    result.count = result.sessions.length;
     sessionsCache = result;
     sessionsCacheTime = Date.now();
     res.json(result);
@@ -2295,10 +2298,21 @@ app.post('/api/sessions/:sessionKey/send', async (req, res) => {
 });
 
 // Close session endpoint (placeholder)
+// Track hidden/closed sessions
+const HIDDEN_SESSIONS_PATH = path.join(__dirname, 'hidden-sessions.json');
+let hiddenSessions = [];
+try { hiddenSessions = JSON.parse(fs.readFileSync(HIDDEN_SESSIONS_PATH, 'utf8')); } catch {}
+
 app.delete('/api/sessions/:key/close', async (req, res) => {
-  // OpenClaw doesn't have a close session API, so just acknowledge
-  // In future this could clear the session
-  res.json({ status: 'acknowledged', message: 'Session marked for cleanup' });
+  const key = decodeURIComponent(req.params.key);
+  if (!hiddenSessions.includes(key)) {
+    hiddenSessions.push(key);
+    fs.writeFileSync(HIDDEN_SESSIONS_PATH, JSON.stringify(hiddenSessions, null, 2));
+  }
+  // Clear sessions cache so next fetch excludes this session
+  sessionsCache = null;
+  sessionsCacheTime = 0;
+  res.json({ status: 'hidden', message: `Session "${key}" hidden from view` });
 });
 
 // === Document Management ===
