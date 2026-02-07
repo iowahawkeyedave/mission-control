@@ -11,6 +11,9 @@ interface Message {
   streaming?: boolean
 }
 
+// uuid() requires HTTPS — fallback for HTTP
+const uuid = () => 'xxxx-xxxx-xxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16))
+
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -30,13 +33,13 @@ export default function Chat() {
     if (!text || isStreaming) return
 
     const userMsg: Message = {
-      id: crypto.randomUUID(),
+      id: uuid(),
       role: 'user',
       content: text,
       timestamp: new Date()
     }
 
-    const assistantId = crypto.randomUUID()
+    const assistantId = uuid()
     const assistantMsg: Message = {
       id: assistantId,
       role: 'assistant',
@@ -248,12 +251,17 @@ export default function Chat() {
           <div style={{
             padding: '16px 24px 20px',
             borderTop: '1px solid rgba(255,255,255,0.06)',
+            position: 'relative',
+            zIndex: 10,
           }}>
-            <div style={{
-              display: 'flex',
-              gap: 12,
-              alignItems: 'flex-end',
-            }}>
+            <form
+              onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
+              style={{
+                display: 'flex',
+                gap: 12,
+                alignItems: 'flex-end',
+              }}
+            >
               <textarea
                 ref={inputRef}
                 value={input}
@@ -262,6 +270,7 @@ export default function Chat() {
                 placeholder="Message Zinbot..."
                 disabled={isStreaming}
                 rows={1}
+                autoFocus
                 style={{
                   flex: 1,
                   background: 'rgba(255,255,255,0.04)',
@@ -275,6 +284,8 @@ export default function Chat() {
                   fontFamily: 'inherit',
                   maxHeight: 120,
                   lineHeight: 1.5,
+                  position: 'relative',
+                  zIndex: 10,
                 }}
                 onInput={(e) => {
                   const t = e.currentTarget
@@ -283,7 +294,7 @@ export default function Chat() {
                 }}
               />
               <button
-                onClick={sendMessage}
+                type="submit"
                 disabled={!input.trim() || isStreaming}
                 style={{
                   width: 44,
@@ -298,11 +309,13 @@ export default function Chat() {
                   justifyContent: 'center',
                   transition: 'all 0.2s',
                   flexShrink: 0,
+                  position: 'relative',
+                  zIndex: 10,
                 }}
               >
                 {isStreaming ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={18} />}
               </button>
-            </div>
+            </form>
             <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 8, textAlign: 'center' }}>
               Connected to OpenClaw Gateway · Claude Opus 4.6 · Full tool access
             </p>
