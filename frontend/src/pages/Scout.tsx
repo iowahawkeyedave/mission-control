@@ -340,8 +340,7 @@ export default function Scout() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 + i * 0.02 }}
                 className="macos-panel"
-                style={{ padding: m ? 14 : '18px 22px', opacity: opp.status === 'dismissed' ? 0.4 : 1, cursor: 'pointer' }}
-                onClick={() => opp.url && window.open(opp.url, '_blank')}
+                style={{ padding: m ? 14 : '18px 22px', opacity: opp.status === 'dismissed' ? 0.4 : 1 }}
               >
                 {/* Mobile: vertical layout */}
                 {m ? (
@@ -357,7 +356,7 @@ export default function Scout() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h3 style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.92)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {opp.title}
+                          {opp.url ? <a href={opp.url} target="_blank" rel="noopener" onClick={e => e.stopPropagation()} style={{ color: 'inherit', textDecoration: 'none' }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>{opp.title}</a> : opp.title}
                         </h3>
                         <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                           <span className="macos-badge" style={{ fontSize: 10 }}>{opp.source}</span>

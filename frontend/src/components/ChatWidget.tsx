@@ -267,8 +267,8 @@ export default function ChatWidget() {
                   placeholder="Message..."
                   disabled={isStreaming}
                   rows={1}
-                  style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '9px 12px', color: 'rgba(255,255,255,0.9)', fontSize: 13, resize: 'none', outline: 'none', fontFamily: 'inherit', maxHeight: 80, lineHeight: 1.4 }}
-                  onInput={(e) => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 80) + 'px' }}
+                  style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '9px 12px', color: 'rgba(255,255,255,0.9)', fontSize: 13, resize: 'vertical', outline: 'none', fontFamily: 'inherit', minHeight: 36, maxHeight: 150, lineHeight: 1.4 }}
+                  onInput={(e) => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 150) + 'px' }}
                 />
                 <button type="submit" data-chat-send disabled={!input.trim() || isStreaming} style={{ width: 34, height: 34, borderRadius: 9, border: 'none', background: input.trim() && !isStreaming ? '#007AFF' : 'rgba(255,255,255,0.06)', color: input.trim() && !isStreaming ? '#fff' : 'rgba(255,255,255,0.2)', cursor: input.trim() && !isStreaming ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {isStreaming ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={14} />}
