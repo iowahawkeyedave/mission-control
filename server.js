@@ -435,7 +435,7 @@ app.get('/api/activity', async (req, res) => {
           taskId: task.id,
           actionable: !!task.childSessionKey,
           actionLabel: task.childSessionKey ? 'Continue Chat' : 'View',
-          actionUrl: '/workshop',
+          actionUrl: `/workshop?task=${task.id}`,
         });
       }
       // In-progress tasks
@@ -452,7 +452,7 @@ app.get('/api/activity', async (req, res) => {
           taskId: task.id,
           actionable: true,
           actionLabel: 'View',
-          actionUrl: '/workshop',
+          actionUrl: `/workshop?task=${task.id}`,
         });
       }
     } catch(e) {}

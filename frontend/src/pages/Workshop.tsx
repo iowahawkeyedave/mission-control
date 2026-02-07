@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Clock, Zap, CheckCircle, Play, X, AlertCircle, Loader2, MessageSquare, ArrowLeft, Send } from 'lucide-react'
 import PageTransition from '../components/PageTransition'
@@ -52,9 +53,28 @@ export default function Workshop() {
   const [addForm, setAddForm] = useState({ title: '', description: '', priority: 'medium', tags: '' })
   const [executing, setExecuting] = useState<Record<string, boolean>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   useEffect(() => { scrollToBottom() }, [chatMessages])
+
+  // Auto-open task from URL param (?task=xxx)
+  useEffect(() => {
+    if (!data || chatTask) return
+    const taskId = searchParams.get('task')
+    if (!taskId) return
+    
+    // Find task in any column
+    const columns = data.columns
+    for (const col of Object.values(columns) as Task[][]) {
+      const found = col.find(t => t.id === taskId)
+      if (found) {
+        openTaskChat(found)
+        setSearchParams({}, { replace: true }) // Clear param
+        break
+      }
+    }
+  }, [data, searchParams])
 
   if (loading || !data) {
     return (
