@@ -149,28 +149,68 @@ app.get('/api/status', (req, res) => {
   }
 });
 
-// API: Cron jobs
-app.get('/api/cron', (req, res) => {
-  // Try to read real cron data
-  let cronJobs = [];
+// API: Live sessions (from OpenClaw gateway)
+app.get('/api/sessions', async (req, res) => {
   try {
-    const cronRaw = execSync('openclaw cron list 2>&1', { timeout: 10000, encoding: 'utf8' });
-    // Parse cron output if available
-    const lines = cronRaw.split('\n').filter(l => l.includes('│'));
-    // Fallback to placeholder with realistic data
-  } catch (e) {}
+    const gwRes = await fetch(`http://127.0.0.1:${GATEWAY_PORT}/tools/invoke`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GATEWAY_TOKEN}`,
+      },
+      body: JSON.stringify({
+        tool: 'sessions_list',
+        args: { limit: 25, messageLimit: 0 },
+      }),
+    });
+    const data = await gwRes.json();
+    const sessions = data?.result?.details?.sessions || [];
+    
+    res.json({
+      count: sessions.length,
+      sessions: sessions.map(s => ({
+        key: s.key,
+        kind: s.kind,
+        channel: s.channel || 'unknown',
+        displayName: s.displayName || s.key.split(':').slice(-1)[0],
+        model: (s.model || '').replace('us.anthropic.', ''),
+        totalTokens: s.totalTokens || 0,
+        contextTokens: s.contextTokens || 0,
+        updatedAt: s.updatedAt ? new Date(s.updatedAt).toISOString() : null,
+        label: s.label || null,
+      })),
+    });
+  } catch (e) {
+    console.error('[Sessions API]', e.message);
+    res.json({ count: 0, sessions: [], error: e.message });
+  }
+});
 
-  cronJobs = [
-    { id: 'hb-main', name: 'Heartbeat Check', schedule: '0 */1 * * *', status: 'active', lastRun: new Date(Date.now() - 3600000).toISOString(), nextRun: new Date(Date.now() + 3600000).toISOString(), duration: '12s', history: [{ time: new Date(Date.now() - 3600000).toISOString(), status: 'success', duration: '12s' }, { time: new Date(Date.now() - 7200000).toISOString(), status: 'success', duration: '8s' }, { time: new Date(Date.now() - 10800000).toISOString(), status: 'success', duration: '15s' }] },
-    { id: 'email-scan', name: 'Email Scanner', schedule: '*/30 * * * *', status: 'active', lastRun: new Date(Date.now() - 1800000).toISOString(), nextRun: new Date(Date.now() + 1800000).toISOString(), duration: '5s', history: [{ time: new Date(Date.now() - 1800000).toISOString(), status: 'success', duration: '5s' }, { time: new Date(Date.now() - 3600000).toISOString(), status: 'success', duration: '4s' }] },
-    { id: 'lead-gen', name: 'Lead Generator', schedule: '0 9 * * 1-5', status: 'active', lastRun: new Date(Date.now() - 86400000).toISOString(), nextRun: new Date(Date.now() + 172800000).toISOString(), duration: '45s', history: [{ time: new Date(Date.now() - 86400000).toISOString(), status: 'success', duration: '45s' }] },
-    { id: 'mem-cleanup', name: 'Memory Maintenance', schedule: '0 3 * * *', status: 'active', lastRun: new Date(Date.now() - 43200000).toISOString(), nextRun: new Date(Date.now() + 43200000).toISOString(), duration: '22s', history: [{ time: new Date(Date.now() - 43200000).toISOString(), status: 'success', duration: '22s' }] },
-    { id: 'cal-sync', name: 'Calendar Sync', schedule: '0 8,20 * * *', status: 'active', lastRun: new Date(Date.now() - 7200000).toISOString(), nextRun: new Date(Date.now() + 36000000).toISOString(), duration: '3s', history: [{ time: new Date(Date.now() - 7200000).toISOString(), status: 'success', duration: '3s' }] },
-    { id: 'twitter-scout', name: 'Twitter Scout', schedule: '0 */4 * * *', status: 'paused', lastRun: new Date(Date.now() - 28800000).toISOString(), nextRun: null, duration: '18s', history: [{ time: new Date(Date.now() - 28800000).toISOString(), status: 'success', duration: '18s' }, { time: new Date(Date.now() - 43200000).toISOString(), status: 'failed', duration: '2s' }] },
-    { id: 'backup', name: 'Workspace Backup', schedule: '0 4 * * *', status: 'active', lastRun: new Date(Date.now() - 21600000).toISOString(), nextRun: new Date(Date.now() + 64800000).toISOString(), duration: '8s', history: [] }
-  ];
+// API: Cron jobs (LIVE from OpenClaw)
+app.get('/api/cron', (req, res) => {
+  try {
+    const cronRaw = execSync('openclaw cron list --json 2>&1', { timeout: 10000, encoding: 'utf8' });
+    const parsed = JSON.parse(cronRaw);
+    
+    const jobs = (parsed.jobs || []).map(j => ({
+      id: j.id,
+      name: j.name || j.id.substring(0, 8),
+      schedule: j.schedule?.expr || j.schedule?.kind || '?',
+      status: !j.enabled ? 'disabled' : (j.state?.lastStatus === 'ok' ? 'active' : j.state?.lastStatus || 'idle'),
+      lastRun: j.state?.lastRunAtMs ? new Date(j.state.lastRunAtMs).toISOString() : null,
+      nextRun: j.state?.nextRunAtMs ? new Date(j.state.nextRunAtMs).toISOString() : null,
+      duration: j.state?.lastDurationMs ? `${j.state.lastDurationMs}ms` : null,
+      target: j.sessionTarget || 'main',
+      payload: j.payload?.kind || '?',
+      description: j.payload?.text?.substring(0, 120) || '',
+      history: [],
+    }));
 
-  res.json({ jobs: cronJobs });
+    res.json({ jobs });
+  } catch (e) {
+    console.error('[Cron API]', e.message);
+    res.json({ jobs: [], error: e.message });
+  }
 });
 
 // API: Tasks (Kanban)
