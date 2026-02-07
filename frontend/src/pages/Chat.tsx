@@ -161,7 +161,7 @@ export default function Chat() {
         margin: '0 auto', 
         display: 'flex', 
         flexDirection: 'column', 
-        height: isMobile ? 'calc(100vh - 80px)' : 'calc(100vh - 96px)' 
+        height: isMobile ? 'calc(100vh - 100px)' : 'calc(100vh - 96px)' 
       }}>
         {/* Header */}
         <div style={{ 

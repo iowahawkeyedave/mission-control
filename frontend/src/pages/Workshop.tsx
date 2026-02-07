@@ -79,11 +79,9 @@ export default function Workshop() {
 
         {/* Kanban Board */}
         <div style={{ 
-          display: isMobile ? 'flex' : 'grid', 
-          gridTemplateColumns: isMobile ? undefined : 'repeat(3, 1fr)', 
-          gap: isMobile ? 16 : 32,
-          overflowX: isMobile ? 'auto' : undefined,
-          paddingBottom: isMobile ? 16 : undefined
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? 20 : 32,
         }}>
           {(['queue', 'inProgress', 'done'] as const).map((col, ci) => {
             const tasks: Task[] = columns[col] || []
@@ -91,8 +89,8 @@ export default function Workshop() {
             const Icon = config.icon
             return (
               <div key={col} style={{ 
-                minWidth: isMobile ? 280 : 0,
-                flexShrink: isMobile ? 0 : undefined
+                flex: isMobile ? undefined : 1,
+                minWidth: 0,
               }}>
                 {/* Column Header */}
                 <motion.div

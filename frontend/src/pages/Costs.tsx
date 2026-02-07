@@ -22,7 +22,15 @@ interface TokenData {
 }
 
 export default function Costs() {
-  const isMobile = useIsMobile()
+  const m = useIsMobile()
+
+  // Shorter labels on mobile
+  const labels = {
+    thisMonth: m ? 'Month' : 'This Month',
+    creditsLeft: m ? 'Credits' : 'Credits Left',
+    dailyAvg: m ? 'Daily Avg' : 'Daily Average',
+    projected: m ? 'Projected' : 'Projected Monthly',
+  }
   const [awsCosts, setAwsCosts] = useState<AWSSCostData | null>(null)
   const [tokenData, setTokenData] = useState<TokenData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -98,15 +106,15 @@ export default function Costs() {
       <div style={{ 
         maxWidth: '1280px', 
         margin: '0 auto', 
-        padding: isMobile ? '16px' : '0',
+        padding: m ? '16px' : '0',
         display: 'flex', 
         flexDirection: 'column', 
-        gap: isMobile ? '20px' : '28px' 
+        gap: m ? '20px' : '28px' 
       }}>
         {/* Header */}
         <div>
           <h1 style={{ 
-            fontSize: isMobile ? '20px' : '28px', 
+            fontSize: m ? '20px' : '28px', 
             fontWeight: '600', 
             color: 'rgba(255,255,255,0.92)', 
             display: 'flex', 
@@ -114,11 +122,11 @@ export default function Costs() {
             gap: '12px', 
             margin: '0' 
           }}>
-            <DollarSign size={isMobile ? 24 : 28} style={{ color: '#32D74B' }} />
+            <DollarSign size={m ? 24 : 28} style={{ color: '#32D74B' }} />
             Cost Tracker
           </h1>
           <p style={{ 
-            fontSize: isMobile ? '14px' : '16px', 
+            fontSize: m ? '14px' : '16px', 
             color: 'rgba(255,255,255,0.65)', 
             marginTop: '4px', 
             margin: '4px 0 0 0' 
@@ -130,15 +138,15 @@ export default function Costs() {
         {/* Row 1: Key Metrics */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
-          gap: isMobile ? '12px' : '20px' 
+          gridTemplateColumns: m ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
+          gap: m ? '12px' : '20px' 
         }}>
           <GlassCard delay={0} noPad>
-            <div style={{ padding: isMobile ? '16px' : '24px' }}>
+            <div style={{ padding: m ? '16px' : '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{ 
-                  width: isMobile ? '40px' : '48px', 
-                  height: isMobile ? '40px' : '48px', 
+                  width: m ? '40px' : '48px', 
+                  height: m ? '40px' : '48px', 
                   borderRadius: '12px', 
                   background: awsCosts.total > 100 ? 'rgba(255,149,0,0.15)' : 'rgba(50,215,75,0.15)',
                   border: '1px solid rgba(255,255,255,0.1)', 
@@ -146,20 +154,20 @@ export default function Costs() {
                   alignItems: 'center', 
                   justifyContent: 'center' 
                 }}>
-                  <DollarSign size={isMobile ? 16 : 20} style={{ color: awsCosts.total > 100 ? '#FF9500' : '#32D74B' }} />
+                  <DollarSign size={m ? 16 : 20} style={{ color: awsCosts.total > 100 ? '#FF9500' : '#32D74B' }} />
                 </div>
                 <span style={{ 
-                  fontSize: isMobile ? '10px' : '11px', 
+                  fontSize: m ? '10px' : '11px', 
                   fontWeight: '700', 
                   color: 'rgba(255,255,255,0.45)', 
                   textTransform: 'uppercase', 
                   letterSpacing: '0.1em' 
                 }}>
-                  This Month
+                  {labels.thisMonth}
                 </span>
               </div>
               <p style={{ 
-                fontSize: isMobile ? '24px' : '32px', 
+                fontSize: m ? '24px' : '32px', 
                 fontWeight: '300', 
                 color: 'rgba(255,255,255,0.92)', 
                 fontFamily: 'system-ui', 
@@ -172,11 +180,11 @@ export default function Costs() {
           </GlassCard>
 
           <GlassCard delay={0.05} noPad>
-            <div style={{ padding: isMobile ? '16px' : '24px' }}>
+            <div style={{ padding: m ? '16px' : '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{ 
-                  width: isMobile ? '40px' : '48px', 
-                  height: isMobile ? '40px' : '48px', 
+                  width: m ? '40px' : '48px', 
+                  height: m ? '40px' : '48px', 
                   borderRadius: '12px', 
                   background: 'rgba(50,215,75,0.15)',
                   border: '1px solid rgba(255,255,255,0.1)', 
@@ -184,20 +192,20 @@ export default function Costs() {
                   alignItems: 'center', 
                   justifyContent: 'center' 
                 }}>
-                  <Target size={isMobile ? 16 : 20} style={{ color: '#32D74B' }} />
+                  <Target size={m ? 16 : 20} style={{ color: '#32D74B' }} />
                 </div>
                 <span style={{ 
-                  fontSize: isMobile ? '10px' : '11px', 
+                  fontSize: m ? '10px' : '11px', 
                   fontWeight: '700', 
                   color: 'rgba(255,255,255,0.45)', 
                   textTransform: 'uppercase', 
                   letterSpacing: '0.1em' 
                 }}>
-                  Credits Left
+                  {labels.creditsLeft}
                 </span>
               </div>
               <p style={{ 
-                fontSize: isMobile ? '24px' : '32px', 
+                fontSize: m ? '24px' : '32px', 
                 fontWeight: '300', 
                 color: 'rgba(255,255,255,0.92)', 
                 fontFamily: 'system-ui', 
@@ -210,11 +218,11 @@ export default function Costs() {
           </GlassCard>
 
           <GlassCard delay={0.1} noPad>
-            <div style={{ padding: isMobile ? '16px' : '24px' }}>
+            <div style={{ padding: m ? '16px' : '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{ 
-                  width: isMobile ? '40px' : '48px', 
-                  height: isMobile ? '40px' : '48px', 
+                  width: m ? '40px' : '48px', 
+                  height: m ? '40px' : '48px', 
                   borderRadius: '12px', 
                   background: 'rgba(0,122,255,0.15)',
                   border: '1px solid rgba(255,255,255,0.1)', 
@@ -222,20 +230,20 @@ export default function Costs() {
                   alignItems: 'center', 
                   justifyContent: 'center' 
                 }}>
-                  <Calendar size={isMobile ? 16 : 20} style={{ color: '#007AFF' }} />
+                  <Calendar size={m ? 16 : 20} style={{ color: '#007AFF' }} />
                 </div>
                 <span style={{ 
-                  fontSize: isMobile ? '10px' : '11px', 
+                  fontSize: m ? '10px' : '11px', 
                   fontWeight: '700', 
                   color: 'rgba(255,255,255,0.45)', 
                   textTransform: 'uppercase', 
                   letterSpacing: '0.1em' 
                 }}>
-                  Daily Average
+                  {labels.dailyAvg}
                 </span>
               </div>
               <p style={{ 
-                fontSize: isMobile ? '24px' : '32px', 
+                fontSize: m ? '24px' : '32px', 
                 fontWeight: '300', 
                 color: 'rgba(255,255,255,0.92)', 
                 fontFamily: 'system-ui', 
@@ -248,11 +256,11 @@ export default function Costs() {
           </GlassCard>
 
           <GlassCard delay={0.15} noPad>
-            <div style={{ padding: isMobile ? '16px' : '24px' }}>
+            <div style={{ padding: m ? '16px' : '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{ 
-                  width: isMobile ? '40px' : '48px', 
-                  height: isMobile ? '40px' : '48px', 
+                  width: m ? '40px' : '48px', 
+                  height: m ? '40px' : '48px', 
                   borderRadius: '12px', 
                   background: 'rgba(255,149,0,0.15)',
                   border: '1px solid rgba(255,255,255,0.1)', 
@@ -260,20 +268,20 @@ export default function Costs() {
                   alignItems: 'center', 
                   justifyContent: 'center' 
                 }}>
-                  <TrendingUp size={isMobile ? 16 : 20} style={{ color: '#FF9500' }} />
+                  <TrendingUp size={m ? 16 : 20} style={{ color: '#FF9500' }} />
                 </div>
                 <span style={{ 
-                  fontSize: isMobile ? '10px' : '11px', 
+                  fontSize: m ? '10px' : '11px', 
                   fontWeight: '700', 
                   color: 'rgba(255,255,255,0.45)', 
                   textTransform: 'uppercase', 
                   letterSpacing: '0.1em' 
                 }}>
-                  Projected Monthly
+                  {labels.projected}
                 </span>
               </div>
               <p style={{ 
-                fontSize: isMobile ? '24px' : '32px', 
+                fontSize: m ? '24px' : '32px', 
                 fontWeight: '300', 
                 color: 'rgba(255,255,255,0.92)', 
                 fontFamily: 'system-ui', 
@@ -289,31 +297,31 @@ export default function Costs() {
         {/* Row 2: Two-column layout */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', 
-          gap: isMobile ? '16px' : '24px' 
+          gridTemplateColumns: m ? '1fr' : '2fr 1fr', 
+          gap: m ? '16px' : '24px' 
         }}>
           {/* Left: Daily Spend Chart */}
           <GlassCard delay={0.2} noPad>
-            <div style={{ padding: isMobile ? '16px' : '24px' }}>
+            <div style={{ padding: m ? '16px' : '24px' }}>
               <h3 style={{ 
-                fontSize: isMobile ? '14px' : '16px', 
+                fontSize: m ? '14px' : '16px', 
                 fontWeight: '600', 
                 color: 'rgba(255,255,255,0.65)', 
-                marginBottom: isMobile ? '16px' : '24px', 
-                margin: `0 0 ${isMobile ? '16px' : '24px'} 0` 
+                marginBottom: m ? '16px' : '24px', 
+                margin: `0 0 ${m ? '16px' : '24px'} 0` 
               }}>
                 Daily Spend Chart
               </h3>
               <div style={{ 
-                height: isMobile ? '180px' : '240px', 
+                height: m ? '180px' : '240px', 
                 display: 'flex', 
                 alignItems: 'flex-end', 
-                gap: isMobile ? '2px' : '4px', 
+                gap: m ? '2px' : '4px', 
                 paddingTop: '20px' 
               }}>
                 {awsCosts.daily.map((day, i) => {
                   const maxCost = Math.max(...awsCosts.daily.map(d => d.cost), 10)
-                  const height = Math.max((day.cost / maxCost) * (isMobile ? 140 : 200), 2)
+                  const height = Math.max((day.cost / maxCost) * (m ? 140 : 200), 2)
                   return (
                     <div key={day.date} style={{ 
                       flex: '1', 
@@ -334,13 +342,12 @@ export default function Costs() {
                         title={`${day.date}: $${day.cost.toFixed(2)}`}
                       />
                       <span style={{ 
-                        fontSize: isMobile ? '8px' : '10px', 
-                        color: 'rgba(255,255,255,0.45)', 
-                        writingMode: 'vertical-rl',
-                        textOrientation: 'mixed',
-                        transform: 'rotate(180deg)'
+                        fontSize: m ? '7px' : '10px', 
+                        color: 'rgba(255,255,255,0.45)',
+                        textAlign: 'center',
+                        lineHeight: 1.1,
                       }}>
-                        {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {new Date(day.date).toLocaleDateString('en-US', { day: 'numeric' })}
                       </span>
                     </div>
                   )
@@ -351,33 +358,33 @@ export default function Costs() {
 
           {/* Right: Service Breakdown */}
           <GlassCard delay={0.25} noPad>
-            <div style={{ padding: isMobile ? '16px' : '24px' }}>
+            <div style={{ padding: m ? '16px' : '24px' }}>
               <h3 style={{ 
-                fontSize: isMobile ? '14px' : '16px', 
+                fontSize: m ? '14px' : '16px', 
                 fontWeight: '600', 
                 color: 'rgba(255,255,255,0.65)', 
-                marginBottom: isMobile ? '16px' : '24px', 
-                margin: `0 0 ${isMobile ? '16px' : '24px'} 0` 
+                marginBottom: m ? '16px' : '24px', 
+                margin: `0 0 ${m ? '16px' : '24px'} 0` 
               }}>
                 Service Breakdown
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '16px' }}>
-                {awsCosts.services.slice(0, isMobile ? 5 : 8).map((service, i) => {
+              <div style={{ display: 'flex', flexDirection: 'column', gap: m ? '12px' : '16px' }}>
+                {awsCosts.services.slice(0, m ? 5 : 8).map((service, i) => {
                   const percentage = (service.cost / awsCosts.total) * 100
                   return (
                     <div key={service.name} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ 
-                          fontSize: isMobile ? '12px' : '14px', 
+                          fontSize: m ? '12px' : '14px', 
                           color: 'rgba(255,255,255,0.65)', 
                           fontWeight: '500' 
                         }}>
-                          {service.name.length > (isMobile ? 20 : 25) 
-                            ? service.name.substring(0, isMobile ? 20 : 25) + '...' 
+                          {service.name.length > (m ? 20 : 25) 
+                            ? service.name.substring(0, m ? 20 : 25) + '...' 
                             : service.name}
                         </span>
                         <span style={{ 
-                          fontSize: isMobile ? '12px' : '14px', 
+                          fontSize: m ? '12px' : '14px', 
                           color: 'rgba(255,255,255,0.92)', 
                           fontWeight: '600', 
                           fontFamily: 'system-ui', 
@@ -407,24 +414,24 @@ export default function Costs() {
 
         {/* Row 3: Token Usage by Session */}
         <GlassCard delay={0.3} noPad>
-          <div style={{ padding: isMobile ? '16px' : '24px' }}>
+          <div style={{ padding: m ? '16px' : '24px' }}>
             <h3 style={{ 
-              fontSize: isMobile ? '14px' : '16px', 
+              fontSize: m ? '14px' : '16px', 
               fontWeight: '600', 
               color: 'rgba(255,255,255,0.65)', 
-              marginBottom: isMobile ? '16px' : '24px', 
-              margin: `0 0 ${isMobile ? '16px' : '24px'} 0` 
+              marginBottom: m ? '16px' : '24px', 
+              margin: `0 0 ${m ? '16px' : '24px'} 0` 
             }}>
               Token Usage by Session
             </h3>
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(300px, 1fr))', 
-              gap: isMobile ? '12px' : '16px' 
+              gridTemplateColumns: m ? '1fr' : 'repeat(auto-fit, minmax(300px, 1fr))', 
+              gap: m ? '12px' : '16px' 
             }}>
-              {(tokenData.sessions || []).slice(0, isMobile ? 4 : 6).map((session, i) => (
+              {(tokenData.sessions || []).slice(0, m ? 4 : 6).map((session, i) => (
                 <div key={session.sessionId} style={{ 
-                  padding: isMobile ? '12px' : '16px', 
+                  padding: m ? '12px' : '16px', 
                   background: 'rgba(255,255,255,0.05)', 
                   borderRadius: '8px',
                   border: '1px solid rgba(255,255,255,0.1)'
@@ -432,14 +439,14 @@ export default function Costs() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                     <div>
                       <div style={{ 
-                        fontSize: isMobile ? '11px' : '12px', 
+                        fontSize: m ? '11px' : '12px', 
                         color: 'rgba(255,255,255,0.45)', 
                         fontFamily: 'monospace' 
                       }}>
-                        {session.sessionId.substring(0, isMobile ? 12 : 16)}...
+                        {session.sessionId.substring(0, m ? 12 : 16)}...
                       </div>
                       <div style={{ 
-                        fontSize: isMobile ? '12px' : '13px', 
+                        fontSize: m ? '12px' : '13px', 
                         color: 'rgba(255,255,255,0.65)', 
                         marginTop: '4px' 
                       }}>
@@ -448,7 +455,7 @@ export default function Costs() {
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ 
-                        fontSize: isMobile ? '14px' : '16px', 
+                        fontSize: m ? '14px' : '16px', 
                         fontWeight: '600', 
                         color: 'rgba(255,255,255,0.92)', 
                         fontFamily: 'system-ui', 
@@ -457,7 +464,7 @@ export default function Costs() {
                         ${session.cost.toFixed(2)}
                       </div>
                       <div style={{ 
-                        fontSize: isMobile ? '11px' : '12px', 
+                        fontSize: m ? '11px' : '12px', 
                         color: 'rgba(255,255,255,0.45)' 
                       }}>
                         {session.tokens.toLocaleString()} tokens
@@ -465,7 +472,7 @@ export default function Costs() {
                     </div>
                   </div>
                   <div style={{ 
-                    fontSize: isMobile ? '10px' : '11px', 
+                    fontSize: m ? '10px' : '11px', 
                     color: 'rgba(255,255,255,0.35)' 
                   }}>
                     {new Date(session.timestamp * 1000).toLocaleString()}
@@ -479,31 +486,31 @@ export default function Costs() {
         {/* Row 4: Budget & Projections */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
-          gap: isMobile ? '16px' : '24px' 
+          gridTemplateColumns: m ? '1fr' : '1fr 1fr', 
+          gap: m ? '16px' : '24px' 
         }}>
           {/* Credits Burn Rate */}
           <GlassCard delay={0.35} noPad>
-            <div style={{ padding: isMobile ? '16px' : '24px' }}>
+            <div style={{ padding: m ? '16px' : '24px' }}>
               <h3 style={{ 
-                fontSize: isMobile ? '14px' : '16px', 
+                fontSize: m ? '14px' : '16px', 
                 fontWeight: '600', 
                 color: 'rgba(255,255,255,0.65)', 
-                marginBottom: isMobile ? '16px' : '24px', 
-                margin: `0 0 ${isMobile ? '16px' : '24px'} 0` 
+                marginBottom: m ? '16px' : '24px', 
+                margin: `0 0 ${m ? '16px' : '24px'} 0` 
               }}>
                 Credits Burn Rate
               </h3>
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ 
-                    fontSize: isMobile ? '12px' : '14px', 
+                    fontSize: m ? '12px' : '14px', 
                     color: 'rgba(255,255,255,0.65)' 
                   }}>
                     Used
                   </span>
                   <span style={{ 
-                    fontSize: isMobile ? '12px' : '14px', 
+                    fontSize: m ? '12px' : '14px', 
                     color: 'rgba(255,255,255,0.92)', 
                     fontFamily: 'system-ui', 
                     fontFeatureSettings: '"tnum"' 
@@ -526,13 +533,13 @@ export default function Costs() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ 
-                    fontSize: isMobile ? '12px' : '13px', 
+                    fontSize: m ? '12px' : '13px', 
                     color: 'rgba(255,255,255,0.45)' 
                   }}>
                     At current rate, credits last:
                   </span>
                   <span style={{ 
-                    fontSize: isMobile ? '12px' : '13px', 
+                    fontSize: m ? '12px' : '13px', 
                     color: 'rgba(255,255,255,0.92)', 
                     fontWeight: '600' 
                   }}>
@@ -541,13 +548,13 @@ export default function Costs() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ 
-                    fontSize: isMobile ? '12px' : '13px', 
+                    fontSize: m ? '12px' : '13px', 
                     color: 'rgba(255,255,255,0.45)' 
                   }}>
                     Daily burn rate:
                   </span>
                   <span style={{ 
-                    fontSize: isMobile ? '12px' : '13px', 
+                    fontSize: m ? '12px' : '13px', 
                     color: 'rgba(255,255,255,0.92)', 
                     fontWeight: '600' 
                   }}>
@@ -560,10 +567,10 @@ export default function Costs() {
 
           {/* Cost Optimization Tips */}
           <GlassCard delay={0.4} noPad>
-            <div style={{ padding: isMobile ? '16px' : '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: isMobile ? '16px' : '24px' }}>
+            <div style={{ padding: m ? '16px' : '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: m ? '16px' : '24px' }}>
                 <h3 style={{ 
-                  fontSize: isMobile ? '14px' : '16px', 
+                  fontSize: m ? '14px' : '16px', 
                   fontWeight: '600', 
                   color: 'rgba(255,255,255,0.65)', 
                   margin: '0' 
@@ -572,15 +579,15 @@ export default function Costs() {
                 </h3>
                 <Zap size={16} style={{ color: '#FF9500' }} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: m ? '12px' : '16px' }}>
                 <div style={{ 
-                  padding: isMobile ? '12px' : '16px', 
+                  padding: m ? '12px' : '16px', 
                   background: 'rgba(50,215,75,0.1)', 
                   borderRadius: '8px',
                   border: '1px solid rgba(50,215,75,0.2)'
                 }}>
                   <div style={{ 
-                    fontSize: isMobile ? '12px' : '14px', 
+                    fontSize: m ? '12px' : '14px', 
                     color: 'rgba(255,255,255,0.92)', 
                     fontWeight: '500', 
                     marginBottom: '4px' 
@@ -588,20 +595,20 @@ export default function Costs() {
                     🎯 Heartbeats: Haiku
                   </div>
                   <div style={{ 
-                    fontSize: isMobile ? '11px' : '12px', 
+                    fontSize: m ? '11px' : '12px', 
                     color: 'rgba(255,255,255,0.65)' 
                   }}>
                     Saving ~$8/day on routine checks
                   </div>
                 </div>
                 <div style={{ 
-                  padding: isMobile ? '12px' : '16px', 
+                  padding: m ? '12px' : '16px', 
                   background: 'rgba(191,90,242,0.1)', 
                   borderRadius: '8px',
                   border: '1px solid rgba(191,90,242,0.2)'
                 }}>
                   <div style={{ 
-                    fontSize: isMobile ? '12px' : '14px', 
+                    fontSize: m ? '12px' : '14px', 
                     color: 'rgba(255,255,255,0.92)', 
                     fontWeight: '500', 
                     marginBottom: '4px' 
@@ -609,14 +616,14 @@ export default function Costs() {
                     🤖 Sub-agents: Sonnet
                   </div>
                   <div style={{ 
-                    fontSize: isMobile ? '11px' : '12px', 
+                    fontSize: m ? '11px' : '12px', 
                     color: 'rgba(255,255,255,0.65)' 
                   }}>
                     Saving ~$15/day vs Opus for tasks
                   </div>
                 </div>
                 <div style={{ 
-                  padding: isMobile ? '10px 12px' : '12px 16px', 
+                  padding: m ? '10px 12px' : '12px 16px', 
                   background: 'rgba(255,255,255,0.05)', 
                   borderRadius: '8px',
                   border: '1px solid rgba(255,255,255,0.1)',
@@ -627,7 +634,7 @@ export default function Costs() {
                 }}>
                   <Settings size={14} style={{ color: 'rgba(255,255,255,0.65)' }} />
                   <span style={{ 
-                    fontSize: isMobile ? '12px' : '13px', 
+                    fontSize: m ? '12px' : '13px', 
                     color: 'rgba(255,255,255,0.65)' 
                   }}>
                     Configure model routing →

@@ -1,7 +1,7 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
-import { Menu } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { useIsMobile } from './lib/useIsMobile'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
@@ -21,46 +21,62 @@ export default function App() {
   const isMobile = useIsMobile()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen)
   const closeSidebar = () => setSidebarOpen(false)
 
   return (
-    <div className="flex h-screen overflow-hidden macos-desktop">
-      {/* Mobile hamburger button */}
-      <button
-        className="mobile-menu-btn"
-        onClick={toggleSidebar}
-        style={{
-          display: 'none',
-          position: 'fixed',
-          top: 16,
-          left: 16,
-          zIndex: 101,
-          width: 40,
-          height: 40,
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(0, 0, 0, 0.3)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: 8,
-          color: 'rgba(255, 255, 255, 0.9)',
-          cursor: 'pointer'
-        }}
-      >
-        <Menu size={20} />
-      </button>
+    <div className="macos-desktop" style={{ display: 'flex', height: '100vh', overflow: 'hidden', maxWidth: '100vw' }}>
+      {/* Mobile hamburger button — fixed top-left */}
+      {isMobile && (
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          style={{
+            position: 'fixed',
+            top: 12,
+            left: 12,
+            zIndex: 201,
+            width: 44,
+            height: 44,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: sidebarOpen ? 'rgba(255,255,255,0.15)' : 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            borderRadius: 10,
+            color: 'rgba(255, 255, 255, 0.9)',
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      )}
 
       {/* Sidebar overlay for mobile */}
-      <div
-        className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
-        onClick={closeSidebar}
-      />
+      {isMobile && (
+        <div
+          className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+          onClick={closeSidebar}
+        />
+      )}
 
       <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
       
-      <main className="flex-1 overflow-y-auto" style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ padding: isMobile ? '16px' : '32px 40px' }}>
+      <main style={{
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        position: 'relative',
+        zIndex: 1,
+        maxWidth: '100%',
+        WebkitOverflowScrolling: 'touch',
+      }}>
+        <div style={{
+          padding: isMobile ? '60px 16px 24px' : '32px 40px',
+          maxWidth: '100%',
+          overflowX: 'hidden',
+        }}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<Dashboard />} />
