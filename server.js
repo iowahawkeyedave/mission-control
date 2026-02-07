@@ -585,48 +585,140 @@ Be thorough. Your output will be shown directly to the user as the task result.`
     }
     
     // Fire and forget — sub-agent runs in background
-    fetch(`http://127.0.0.1:${gwPort}/tools/invoke`, {
+    const spawnRes = await fetch(`http://127.0.0.1:${gwPort}/tools/invoke`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gwToken}` },
       body: JSON.stringify({
         tool: 'sessions_spawn',
-        input: {
+        args: {
           task: taskPrompt,
           model: 'sonnet',
           runTimeoutSeconds: 300,
           label: `workshop-${taskId}`
         }
       })
-    }).then(async (spawnRes) => {
-      const spawnData = await spawnRes.json();
-      const resultText = spawnData?.result?.content?.[0]?.text || '';
-      
-      // Move task to done
-      const tasksNow = JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8'));
-      const idx = tasksNow.columns.inProgress.findIndex(t => t.id === taskId);
-      if (idx >= 0) {
-        const doneTask = tasksNow.columns.inProgress.splice(idx, 1)[0];
-        doneTask.status = 'done';
-        doneTask.completed = new Date().toISOString();
-        doneTask.result = resultText.substring(0, 2000) || 'Completed';
-        tasksNow.columns.done.unshift(doneTask);
-        fs.writeFileSync(TASKS_FILE, JSON.stringify(tasksNow, null, 2));
-      }
-    }).catch(err => {
-      console.error('[Task Execute] Sub-agent error:', err.message);
-      // Move task back to queue on error
-      const tasksNow = JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8'));
-      const idx = tasksNow.columns.inProgress.findIndex(t => t.id === taskId);
-      if (idx >= 0) {
-        const failedTask = tasksNow.columns.inProgress.splice(idx, 1)[0];
-        failedTask.status = 'failed';
-        failedTask.error = err.message;
-        tasksNow.columns.queue.unshift(failedTask);
-        fs.writeFileSync(TASKS_FILE, JSON.stringify(tasksNow, null, 2));
-      }
     });
     
-    res.json({ ok: true, message: 'Task execution started', taskId });
+    const spawnData = await spawnRes.json();
+    const childKey = spawnData?.result?.details?.childSessionKey || spawnData?.result?.content?.[0]?.text?.match(/"childSessionKey":\s*"([^"]+)"/)?.[1] || '';
+    
+    if (!childKey) {
+      console.error('[Task Execute] No child session key:', JSON.stringify(spawnData));
+    }
+    
+    // Save child session key for polling
+    task.childSessionKey = childKey;
+    fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2));
+    
+    // Poll for completion in background
+    if (childKey) {
+      const pollInterval = setInterval(async () => {
+        try {
+          const listRes = await fetch(`http://127.0.0.1:${gwPort}/tools/invoke`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gwToken}` },
+            body: JSON.stringify({ tool: 'sessions_list', args: { limit: 100, messageLimit: 1 } })
+          });
+          const listData = await listRes.json();
+          const sessions = JSON.parse(listData?.result?.content?.[0]?.text || '[]');
+          const child = sessions.find(s => s.key === childKey);
+          
+          if (!child || child.status === 'ended' || child.status === 'completed' || child.idle > 120) {
+            clearInterval(pollInterval);
+            
+            // Get last message from the child session
+            let resultText = '';
+            try {
+              const histRes = await fetch(`http://127.0.0.1:${gwPort}/tools/invoke`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gwToken}` },
+                body: JSON.stringify({ tool: 'sessions_history', args: { sessionKey: childKey, limit: 5 } })
+              });
+              const histData = await histRes.json();
+              const histText = histData?.result?.content?.[0]?.text || '';
+              // Parse messages and get last assistant message
+              try {
+                const msgs = JSON.parse(histText);
+                const assistantMsgs = (Array.isArray(msgs) ? msgs : []).filter(m => m.role === 'assistant');
+                if (assistantMsgs.length > 0) {
+                  const last = assistantMsgs[assistantMsgs.length - 1];
+                  resultText = typeof last.content === 'string' ? last.content : last.content?.[0]?.text || '';
+                }
+              } catch(e) {
+                // Maybe it's raw text
+                resultText = histText.substring(0, 2000);
+              }
+            } catch(e) {
+              console.error('[Task Poll] History fetch failed:', e.message);
+            }
+            
+            // If sessions_history didn't work, try reading transcript file directly
+            if (!resultText) {
+              try {
+                const uuid = childKey.split(':').pop();
+                const transcriptDir = path.join(require('os').homedir(), '.openclaw/agents/main/sessions');
+                const files = fs.readdirSync(transcriptDir).filter(f => f.includes(uuid));
+                if (files.length > 0) {
+                  const lines = fs.readFileSync(path.join(transcriptDir, files[0]), 'utf8').trim().split('\n');
+                  // Find last assistant message
+                  for (let i = lines.length - 1; i >= 0; i--) {
+                    try {
+                      const evt = JSON.parse(lines[i]);
+                      if (evt.type === 'message' && evt.message?.role === 'assistant') {
+                        const content = evt.message.content;
+                        resultText = Array.isArray(content) 
+                          ? content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+                          : typeof content === 'string' ? content : '';
+                        if (resultText) break;
+                      }
+                    } catch(e) {}
+                  }
+                }
+              } catch(e) {
+                console.error('[Task Poll] Transcript read failed:', e.message);
+              }
+            }
+            
+            // Move task to done
+            const tasksNow = JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8'));
+            const idx = tasksNow.columns.inProgress.findIndex(t => t.id === taskId);
+            if (idx >= 0) {
+              const doneTask = tasksNow.columns.inProgress.splice(idx, 1)[0];
+              doneTask.status = 'done';
+              doneTask.completed = new Date().toISOString();
+              doneTask.result = resultText.substring(0, 3000) || 'Task completed (no output captured)';
+              delete doneTask.childSessionKey;
+              tasksNow.columns.done.unshift(doneTask);
+              fs.writeFileSync(TASKS_FILE, JSON.stringify(tasksNow, null, 2));
+              console.log(`[Task Execute] ✅ ${taskId} done, result: ${resultText.substring(0, 80)}...`);
+            }
+          }
+        } catch(e) {
+          console.error('[Task Poll] Error:', e.message);
+        }
+      }, 10000); // Poll every 10 seconds
+      
+      // Safety: stop polling after 6 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        // Check if task is still in progress
+        try {
+          const tasksNow = JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8'));
+          const idx = tasksNow.columns.inProgress.findIndex(t => t.id === taskId);
+          if (idx >= 0) {
+            const timedOut = tasksNow.columns.inProgress.splice(idx, 1)[0];
+            timedOut.status = 'done';
+            timedOut.completed = new Date().toISOString();
+            timedOut.result = 'Task timed out after 6 minutes. Check sub-agent session for results.';
+            delete timedOut.childSessionKey;
+            tasksNow.columns.done.unshift(timedOut);
+            fs.writeFileSync(TASKS_FILE, JSON.stringify(tasksNow, null, 2));
+          }
+        } catch(e) {}
+      }, 360000);
+    }
+    
+    res.json({ ok: true, message: 'Task execution started', taskId, childKey });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
