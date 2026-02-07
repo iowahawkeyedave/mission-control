@@ -405,7 +405,7 @@ app.get('/api/status', async (req, res) => {
       agent: {
         name: mcConfig.name || 'Mission Control',
         status: 'active',
-        model: modelMatch ? modelMatch[1].replace('us.anthropic.','').replace(/claude-opus-(\d+)-(\d+).*/, 'Claude Opus $1').replace(/claude-sonnet-(\d+).*/, 'Claude Sonnet $1').replace(/-/g,' ') : 'Claude Opus 4',
+        model: modelMatch ? modelMatch[1].replace('us.anthropic.','').replace(/claude-opus-(\d+)-(\d+).*/, 'Claude Opus $1.$2').replace(/claude-sonnet-(\d+).*/, 'Claude Sonnet $1').replace(/-/g,' ') : 'Claude Opus 4.6',
         activeSessions: sessionsMatch ? parseInt(sessionsMatch[1]) : 0,
         totalAgents: agentsMatch ? parseInt(agentsMatch[1]) : 1,
         memoryFiles: memoryMatch ? parseInt(memoryMatch[1]) : 46,
@@ -1361,7 +1361,7 @@ app.get('/api/agents', async (req, res) => {
       role: 'Commander',
       avatar: '🤖',
       status: 'active',
-      model: mainSession ? (mainSession.model || '').replace('us.anthropic.', '').replace(/claude-opus-(\d+).*/, 'Claude Opus $1').replace(/-/g, ' ') : 'Claude Opus 4',
+      model: mainSession ? (mainSession.model || '').replace('us.anthropic.', '').replace(/claude-opus-(\d+).*/, 'Claude Opus $1').replace(/-/g, ' ') : 'Claude Opus 4.6',
       description: 'Primary AI agent. Manages all operations, communications, and development tasks.',
       lastActive: mainSession?.updatedAt ? new Date(mainSession.updatedAt).toISOString() : new Date().toISOString(),
       totalTokens: mainSession?.totalTokens || 0,
@@ -1454,7 +1454,7 @@ app.get('/api/agents', async (req, res) => {
     console.error('[Agents API]', e.message);
     res.json({
       agents: [
-        { id: 'zinbot', name: 'Zinbot', role: 'Commander', avatar: '🤖', status: 'active', model: 'Claude Opus 4', description: 'Primary agent (session data unavailable)', lastActive: new Date().toISOString(), totalTokens: 0 }
+        { id: 'zinbot', name: 'Zinbot', role: 'Commander', avatar: '🤖', status: 'active', model: 'Claude Opus 4.6', description: 'Primary agent (session data unavailable)', lastActive: new Date().toISOString(), totalTokens: 0 }
       ],
       conversations: [],
       error: e.message
