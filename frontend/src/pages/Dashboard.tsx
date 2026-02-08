@@ -35,13 +35,17 @@ function QuickActionsBar() {
   const handleQuickAction = async (endpoint: string, label: string) => {
     if (loading) return
     
-    // Email and Schedule: open chat widget with auto-send
+    // All quick actions: open chat widget with auto-send
     if (endpoint === '/quick/emails') {
       window.dispatchEvent(new CustomEvent('open-chat', { detail: { message: 'Check my unread emails and summarize anything important.', autoSend: true } }))
       return
     }
     if (endpoint === '/quick/schedule') {
       window.dispatchEvent(new CustomEvent('open-chat', { detail: { message: "What's on my calendar today and tomorrow?", autoSend: true } }))
+      return
+    }
+    if (endpoint === '/heartbeat/run') {
+      window.dispatchEvent(new CustomEvent('open-chat', { detail: { message: 'Run a quick heartbeat check: emails, calendar, anything urgent I should know about?', autoSend: true } }))
       return
     }
     
