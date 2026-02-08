@@ -11,3 +11,7 @@ node_modules/
 hidden-sessions.json
 mc-config.kevin-backup.json
 public/
+tasks.json
+agents-custom.json
+scout-results.json
+SPEC.md
