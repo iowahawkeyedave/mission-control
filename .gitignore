@@ -7,3 +7,7 @@ mc-config.json
 documents/
 scout-results.json
 tasks.jsondocuments/
+node_modules/
+hidden-sessions.json
+mc-config.kevin-backup.json
+public/

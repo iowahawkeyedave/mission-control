@@ -21,7 +21,7 @@ const BRAVE_API_KEY = (() => {
     const key = fs.readFileSync(keyFile, 'utf8').trim();
     if (key) return key;
   } catch {}
-  return 'BSAXySWcgWqzDfU2GUVBNZ2XfCcUtLx';
+  return process.env.BRAVE_API_KEY || '';
 })();
 const RESULTS_FILE = path.join(__dirname, 'scout-results.json');
 const MAX_RESULTS_PER_QUERY = 5;
