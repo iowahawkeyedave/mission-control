@@ -2396,41 +2396,14 @@ app.post('/api/heartbeat/run', async (req, res) => {
   }
 });
 
-// POST /api/quick/emails — just return a message (actual email check happens via heartbeat)
+// POST /api/quick/emails — disabled to prevent loop (email checks via heartbeat/cron only)
 app.post('/api/quick/emails', async (req, res) => {
-  try {
-    const r = await fetch(`http://127.0.0.1:${GATEWAY_PORT}/tools/invoke`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GATEWAY_TOKEN}` },
-      body: JSON.stringify({ tool: 'sessions_send', args: { sessionKey: 'agent:main:main', message: 'Check for urgent unread emails and report back briefly.' }, _disabled: 'moved to cron — disable direct pings to avoid loops' })
-    });
-    const data = await r.json();
-    // result may be a JSON string — parse it to extract reply
-    let parsed = data?.result;
-    if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed); } catch {} }
-    const reply = (typeof parsed === 'object' ? parsed?.reply : null) || data?.result?.reply || 'Done';
-    res.json({ status: 'sent', reply });
-  } catch(e) { 
-    res.json({ status: 'error', error: e.message }); 
-  }
+  res.json({ status: 'ok', reply: 'Email checks run via scheduled heartbeats. No manual ping needed.' });
 });
 
-// POST /api/quick/schedule
+// POST /api/quick/schedule — disabled to prevent loop
 app.post('/api/quick/schedule', async (req, res) => {
-  try {
-    const r = await fetch(`http://127.0.0.1:${GATEWAY_PORT}/tools/invoke`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GATEWAY_TOKEN}` },
-      body: JSON.stringify({ tool: 'sessions_send', args: { sessionKey: 'agent:main:main', message: "Check today's calendar events and list them briefly." } })
-    });
-    const data = await r.json();
-    let schedParsed = data?.result;
-    if (typeof schedParsed === 'string') { try { schedParsed = JSON.parse(schedParsed); } catch {} }
-    const schedReply = (typeof schedParsed === 'object' ? schedParsed?.reply : null) || 'Done';
-    res.json({ status: 'sent', reply: schedReply });
-  } catch(e) { 
-    res.json({ status: 'error', error: e.message }); 
-  }
+  res.json({ status: 'ok', reply: 'Calendar checks run via scheduled heartbeats.' });
 });
 
 // ========== SETTINGS API ENDPOINTS ==========
